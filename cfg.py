@@ -14,7 +14,8 @@ def get_cfg():
     parser.add_argument("--n_retr_from", type=int, default=4, help="number of retreival from piles")
 
     parser.add_argument("--n_frames", type=int, default=10000000, help="Number of frames to train")
-    parser.add_argument("--eval_every", type=int, default=250000, help="Evaluate every x frames")
+    parser.add_argument("--eval_every", type=int, default=50000, help="Evaluate every x frames")
+    parser.add_argument("--save_every", type=int, default=50000, help="Save a model every x frames")
     parser.add_argument("--n_step", type=int, default=1, help="Multistep IQN")
     parser.add_argument("--buffer_size", type=int, default=int(1e5), help="Replay memory size")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for updating the DQN")

@@ -25,7 +25,7 @@ def evaluate(validation_dir):
 
         while not done:
             possible_actions = test_env.get_possible_actions()
-            action = agent.get_action([state], [possible_actions], 0.0, True)
+            action = agent.get_action([state], [possible_actions], eps=0.0)
             next_state, r, done = test_env.step(action[0])
             state = next_state
 
@@ -44,6 +44,7 @@ if __name__ == "__main__":
 
     n_frames = cfg.n_frames
     eval_every = cfg.eval_every
+    save_every = cfg.save_every
 
     look_ahead = cfg.look_ahead
     n_stor_to = cfg.n_stor_to
@@ -70,10 +71,6 @@ if __name__ == "__main__":
     log_dir = '/output/train/log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-
-    simulation_dir = '/output/train/simulation/'
-    if not os.path.exists(simulation_dir):
-        os.makedirs(simulation_dir)
 
     validation_dir = './input/validation/{0}-{1}-{2}-{3}/'.format(n_stor_to, n_resh_from, n_resh_to, n_retr_from)
 
@@ -107,7 +104,7 @@ if __name__ == "__main__":
 
     for frame in range(start_frame, n_frames + 1):
         possible_actions = envs.get_possible_actions()
-        action = agent.get_action(state, possible_actions, eps)
+        action = agent.get_action(state, possible_actions, eps=eps)
         next_state, reward, done = envs.step(action)  # returns np.stack(obs), np.stack(action) ...
         for s, a, r, ns, d in zip(state, action, reward, next_state, done):
             loss = agent.step(s, a, r, ns, d)
@@ -123,12 +120,12 @@ if __name__ == "__main__":
             makespan = evaluate(validation_dir)
             vessl.log(payload={"Perf/makespan": makespan}, step=episode)
 
-        if done.any():
+        if frame % save_every == 0:
+            agent.save(frame, model_dir)
+
+        if True in done:
             reward_epi = np.sum(reward_list)
             avg_loss = np.mean(loss_list)
-            reward_list = []
-            loss_list = []
-            episode += 1
 
             print("episode: %d | reward: %.2f | loss : %.2f" % (episode, reward_epi, avg_loss))
             with open(log_dir + "train_log.csv", 'a') as f:
@@ -136,4 +133,7 @@ if __name__ == "__main__":
 
             vessl.log(payload={"Train/reward": reward_epi, "Train/loss": avg_loss}, step=episode)
 
+            reward_list = []
+            loss_list = []
+            episode += 1
             state = envs.reset()

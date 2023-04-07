@@ -6,8 +6,6 @@ from torch_geometric.data import HeteroData
 from environment.data import generate_data
 from environment.simulation import Management
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
 class SteelStockYard(object):
     def __init__(self, look_ahead=2,  # 상태 구성 시 각 파일에서 포함할 강재의 수
@@ -155,9 +153,9 @@ class SteelStockYard(object):
                     features = 2 * np.abs(all_x_coords - to_pile_x) + np.abs(all_y_coords - to_pile_y)
                     node_features_for_plate[self.look_ahead * i + j] = features / 194
 
-        state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32, device=device)
-        state['pile'].x = torch.tensor(node_features_for_pile, dtype=torch.float32, device=device)
-        state['plate'].x = torch.tensor(node_features_for_plate, dtype=torch.float32, device=device)
+        state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32)
+        state['pile'].x = torch.tensor(node_features_for_pile, dtype=torch.float32)
+        state['plate'].x = torch.tensor(node_features_for_plate, dtype=torch.float32)
 
         edge_plate_plate = np.zeros((2, num_of_edge_for_plate_plate))
         edge_plate_pile = np.zeros((2, num_of_edge_for_plate_pile))
@@ -176,8 +174,8 @@ class SteelStockYard(object):
             edge_pile_crane[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
             edge_pile_crane[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
 
-        state['plate', 'stacking', 'plate'].edge_index = torch.tensor(edge_plate_plate, dtype=torch.long, device=device)
-        state['plate', 'locating', 'pile'].edge_index = torch.tensor(edge_plate_pile, dtype=torch.long, device=device)
-        state['pile', 'moving', 'crane'].edge_index = torch.tensor(edge_pile_crane, dtype=torch.long, device=device)
+        state['plate', 'stacking', 'plate'].edge_index = torch.tensor(edge_plate_plate, dtype=torch.long)
+        state['plate', 'locating', 'pile'].edge_index = torch.tensor(edge_plate_pile, dtype=torch.long)
+        state['pile', 'moving', 'crane'].edge_index = torch.tensor(edge_pile_crane, dtype=torch.long)
 
         return state

@@ -147,10 +147,10 @@ class Agent():
 
         return loss
 
-    def get_action(self, state, possible_actions, eps=0.0, eval=False):
-        state = Batch.from_data_list(state)
+    def get_action(self, state, possible_actions, eps=0.0):
+        state = Batch.from_data_list(state).to(device)
 
-        if random.random() > eps:  # select greedy action if random number is higher than epsilon or noisy network is used!
+        if random.random() >= eps:  # select greedy action if random number is higher than epsilon or noisy network is used!
             self.qnetwork_local.eval()
             with torch.no_grad():
                 action_values = self.qnetwork_local.get_qvalues(state)
@@ -159,14 +159,13 @@ class Agent():
             mask = np.ones_like(action_values)
             for i in range(len(possible_actions)):
                 mask[i, possible_actions[i]] = 0.0
-            temp = action_values - np.inf * mask
-            action_values = np.where(np.isnan(temp), action_values, temp)
+            const = 1.5 * (np.max(action_values) - np.min(action_values))
+            action_values = action_values - const * mask
+            # temp = action_values - np.inf * mask
+            # action_values = np.where(np.isnan(temp), action_values, temp)
             action = np.argmax(action_values, axis=1)
         else:
-            if eval:
-                action = random.choices(possible_actions, k=1)
-            else:
-                action = random.choices(possible_actions, k=self.worker)
+            action = [random.choices(candidate)[0] for candidate in possible_actions]
 
         return action
 
@@ -174,8 +173,8 @@ class Agent():
         self.optimizer.zero_grad()
 
         states, actions, rewards, next_states, dones, idx, weights = experiences
-        states = Batch.from_data_list(states)
-        next_states = Batch.from_data_list(next_states)
+        states = Batch.from_data_list(states).to(device)
+        next_states = Batch.from_data_list(next_states).to(device)
         actions = torch.LongTensor(actions).to(device).unsqueeze(1)
         rewards = torch.FloatTensor(rewards).to(device).unsqueeze(1)
         dones = torch.FloatTensor(dones).to(device).unsqueeze(1)
@@ -236,6 +235,11 @@ class Agent():
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(self.tau * local_param.data + (1.0 - self.tau) * target_param.data)
 
+    def save(self, frame, file_dir):
+        torch.save({"frame": frame,
+                    "model_state_dict": self.qnetwork_target.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict()},
+                   file_dir + "frame-%d.pt" % frame)
 
 def calculate_huber_loss(td_errors, k=1.0):
     loss = torch.where(td_errors.abs() <= k, 0.5 * td_errors.pow(2), k * (td_errors.abs() - 0.5 * k))
