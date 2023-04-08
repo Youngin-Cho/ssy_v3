@@ -65,11 +65,11 @@ if __name__ == "__main__":
     min_eps = cfg.min_eps
     worker = cfg.worker
 
-    model_dir = './output/train/model/'
+    model_dir = '/output/train/model/'
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    log_dir = './output/train/log/'
+    log_dir = '/output/train/log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
