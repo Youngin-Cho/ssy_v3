@@ -1,5 +1,6 @@
 import os
-import vessl
+# import vessl
+import numpy as np
 import pandas as pd
 
 from cfg import get_cfg
@@ -40,7 +41,7 @@ def evaluate(validation_dir):
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    vessl.init(organization="snu-eng-dgx", project="S", hp=cfg)
+    # vessl.init(organization="snu-eng-dgx", project="S", hp=cfg)
 
     n_frames = cfg.n_frames
     eval_every = cfg.eval_every
@@ -64,11 +65,11 @@ if __name__ == "__main__":
     min_eps = cfg.min_eps
     worker = cfg.worker
 
-    model_dir = '/output/train/model/'
+    model_dir = './output/train/model/'
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    log_dir = '/output/train/log/'
+    log_dir = './output/train/log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -80,7 +81,7 @@ if __name__ == "__main__":
 
     agent = Agent(envs.state_size, envs.action_size, envs.meta_data, look_ahead,
                   n_step, batch_size, buffer_size, lr, tau, gamma, N, worker)
-    # writer = SummaryWriter(log_dir)
+    writer = SummaryWriter(log_dir)
 
     if cfg.load_model:
         checkpoint = torch.load(cfg.model_path)
@@ -91,18 +92,21 @@ if __name__ == "__main__":
     else:
         start_frame = 1
 
-    with open(log_dir + "train_log.csv", 'w') as f:
-        f.write('episode, reward, loss\n')
+    # with open(log_dir + "train_log.csv", 'w') as f:
+    #     f.write('episode, reward, loss\n')
+    with open(log_dir + "validation_log.csv", 'w') as f:
+        f.write('frame, makespan\n')
 
     eps = min_eps
     d_eps = max_eps - min_eps
 
     state = envs.reset()
     episode = 1
-    reward_list = []
-    loss_list = []
+    reward_window = deque(maxlen=500)
 
     for frame in range(start_frame, n_frames + 1):
+        writer.add_scalar("Training/Epsilon", eps, frame)
+
         possible_actions = envs.get_possible_actions()
         action = agent.get_action(state, possible_actions, eps=eps)
         next_state, reward, done = envs.step(action)  # returns np.stack(obs), np.stack(action) ...
@@ -110,30 +114,26 @@ if __name__ == "__main__":
             loss = agent.step(s, a, r, ns, d)
         state = next_state
 
-        reward_list.append(np.mean(reward))
+        reward_window.append(np.mean(reward))
         if loss is not None:
-            loss_list.append(loss)
+            writer.add_scalar("Training/Loss", loss, frame)
+        if len(reward_window) == 500:
+            writer.add_scalar("Training/Reward", np.sum(reward_window), frame)
+            print("frame: %d | reward_avg: %.2f" % (frame, np.sum(reward_window)))
 
         eps = max(max_eps - ((frame * d_eps) / eps_steps), min_eps)
 
         if frame % eval_every == 0 or frame == 1:
             makespan = evaluate(validation_dir)
-            vessl.log(payload={"Perf/makespan": makespan}, step=episode)
+            writer.add_scalar("Validation/Makespan", makespan, frame)
+            # vessl.log(payload={"Perf/makespan": makespan}, step=episode)
+            with open(log_dir + "validation_log.csv", 'a') as f:
+                f.write('%d,%1.2f\n' % (frame, makespan))
 
         if frame % save_every == 0:
             agent.save(frame, model_dir)
 
         if True in done:
-            reward_epi = np.sum(reward_list)
-            avg_loss = np.mean(loss_list)
-
-            print("episode: %d | reward: %.2f | loss : %.2f" % (episode, reward_epi, avg_loss))
-            with open(log_dir + "train_log.csv", 'a') as f:
-                f.write('%d,%1.2f,1.2%f\n' % (episode, reward_epi, avg_loss))
-
-            vessl.log(payload={"Train/reward": reward_epi, "Train/loss": avg_loss}, step=episode)
-
-            reward_list = []
-            loss_list = []
-            episode += 1
             state = envs.reset()
+
+    writer.close()
