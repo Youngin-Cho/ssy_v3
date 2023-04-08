@@ -110,7 +110,7 @@ class SteelStockYard(object):
         crane_dis = 0
         for crane_name in self.model.crane_dis.keys():
             crane_dis += self.model.crane_dis[crane_name]
-        reward = - crane_dis / 194
+        reward = 1 / crane_dis if crane_dis != 0 else 1
 
         return reward
 

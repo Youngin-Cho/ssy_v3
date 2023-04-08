@@ -8,8 +8,8 @@ from torch_geometric.data import Batch
 from collections import deque
 from agent.network import Network
 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device('mps:0' if torch.backends.mps.is_available() else 'cpu')
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device('mps:0' if torch.backends.mps.is_available() else 'cpu')
 
 
 class PrioritizedReplay(object):
@@ -102,7 +102,7 @@ class PrioritizedReplay(object):
 
 class Agent():
     def __init__(self, state_size, action_size, meta_data, look_ahead,
-                 n_step, batch_size, capacity, update_start, lr, tau, gamma, N, worker):
+                 n_step, batch_size, capacity, lr, tau, gamma, N, worker):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -116,7 +116,6 @@ class Agent():
         self.batch_size = batch_size * worker
         self.Q_updates = 0
         self.n_step = n_step
-        self.update_start = update_start
         self.worker = worker
         self.update_every = worker
         self.last_action = None
@@ -143,7 +142,7 @@ class Agent():
         self.t_step = (self.t_step + 1) % self.update_every
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
-            if len(self.memory) >= self.update_start:
+            if len(self.memory) >= self.batch_size:
                 experiences = self.memory.sample()
                 loss = self.learn(experiences)
 
@@ -237,11 +236,11 @@ class Agent():
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(self.tau * local_param.data + (1.0 - self.tau) * target_param.data)
 
-    def save(self, frame, file_dir):
-        torch.save({"frame": frame,
+    def save(self, episode, file_dir):
+        torch.save({"episode": episode,
                     "model_state_dict": self.qnetwork_target.state_dict(),
                     "optimizer_state_dict": self.optimizer.state_dict()},
-                   file_dir + "frame-%d.pt" % frame)
+                   file_dir + "frame-%d.pt" % episode)
 
 def calculate_huber_loss(td_errors, k=1.0):
     loss = torch.where(td_errors.abs() <= k, 0.5 * td_errors.pow(2), k * (td_errors.abs() - 0.5 * k))
