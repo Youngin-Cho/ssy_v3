@@ -54,7 +54,8 @@ if __name__ == "__main__":
     n_retr_from = cfg.n_retr_from
 
     n_step = cfg.n_step
-    buffer_size = cfg.buffer_size
+    capacity = cfg.capacity
+    update_start = cfg.update_start
     batch_size = cfg.batch_size
     N = cfg.N
     lr = cfg.lr
@@ -80,7 +81,7 @@ if __name__ == "__main__":
                        num_of_reshuffle_to_piles=n_resh_to, num_of_retrieval_from_piles=n_retr_from)
 
     agent = Agent(envs.state_size, envs.action_size, envs.meta_data, look_ahead,
-                  n_step, batch_size, buffer_size, lr, tau, gamma, N, worker)
+                  n_step, batch_size, capacity, update_start, lr, tau, gamma, N, worker)
     writer = SummaryWriter(log_dir)
 
     if cfg.load_model:
@@ -102,7 +103,7 @@ if __name__ == "__main__":
 
     state = envs.reset()
     episode = 1
-    reward_window = deque(maxlen=500)
+    # reward_window = deque(maxlen=500)
 
     for frame in range(start_frame, n_frames + 1):
         writer.add_scalar("Training/Epsilon", eps, frame)
@@ -114,16 +115,17 @@ if __name__ == "__main__":
             loss = agent.step(s, a, r, ns, d)
         state = next_state
 
-        reward_window.append(np.mean(reward))
+        # reward_window.append(np.mean(reward))
         if loss is not None:
             writer.add_scalar("Training/Loss", loss, frame)
-        if len(reward_window) == 500:
-            writer.add_scalar("Training/Reward", np.sum(reward_window), frame)
-            print("frame: %d | reward_avg: %.2f" % (frame, np.sum(reward_window)))
+        # if len(reward_window) == 500:
+        #     writer.add_scalar("Training/Reward", np.sum(reward_window), frame)
+        #     print("frame: %d | reward_avg: %.2f" % (frame, np.sum(reward_window)))
 
-        eps = max(max_eps - ((frame * d_eps) / eps_steps), min_eps)
+        if frame >= update_start:
+            eps = max(max_eps - ((frame * d_eps) / eps_steps), min_eps)
 
-        if frame % eval_every == 0 or frame == 1:
+        if frame % eval_every == 0 or frame == update_start:
             makespan = evaluate(validation_dir)
             writer.add_scalar("Validation/Makespan", makespan, frame)
             # vessl.log(payload={"Perf/makespan": makespan}, step=episode)

@@ -8,7 +8,8 @@ from torch_geometric.data import Batch
 from collections import deque
 from agent.network import Network
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device('mps:0' if torch.backends.mps.is_available() else 'cpu')
 
 
 class PrioritizedReplay(object):
@@ -16,7 +17,7 @@ class PrioritizedReplay(object):
     Proportional Prioritization
     """
 
-    def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_frames=100000,
+    def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_frames=10000,
                  parallel_env=4):
         self.capacity = capacity
         self.batch_size = batch_size
@@ -101,7 +102,7 @@ class PrioritizedReplay(object):
 
 class Agent():
     def __init__(self, state_size, action_size, meta_data, look_ahead,
-                 n_step, batch_size, buffer_size, lr, tau, gamma, N, worker):
+                 n_step, batch_size, capacity, update_start, lr, tau, gamma, N, worker):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -115,6 +116,7 @@ class Agent():
         self.batch_size = batch_size * worker
         self.Q_updates = 0
         self.n_step = n_step
+        self.update_start = update_start
         self.worker = worker
         self.update_every = worker
         self.last_action = None
@@ -127,7 +129,7 @@ class Agent():
         self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)
 
         # Replay memory
-        self.memory = PrioritizedReplay(buffer_size, self.batch_size, gamma=self.gamma, n_step=n_step, parallel_env=worker)
+        self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step, parallel_env=worker)
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
@@ -141,7 +143,7 @@ class Agent():
         self.t_step = (self.t_step + 1) % self.update_every
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
-            if len(self.memory) >= 500:
+            if len(self.memory) >= self.update_start:
                 experiences = self.memory.sample()
                 loss = self.learn(experiences)
 

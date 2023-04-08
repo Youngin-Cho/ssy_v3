@@ -5,7 +5,8 @@ import numpy as np
 
 from torch_geometric.nn import HGTConv, Linear, global_add_pool
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device('mps:0' if torch.backends.mps.is_available() else 'cpu')
 
 
 class Network(nn.Module):
