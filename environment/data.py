@@ -108,7 +108,7 @@ def generate_data(num_of_storage_to_piles=10,  # 적치 작업 시 강재를 적
 
     for pile in reshuffle_from_piles:
         # num_of_plates = random.randint(150, 201)
-        num_of_plates = random.randint(25, 51)
+        num_of_plates = random.randint(15, 21)
         pileno = [pile] * num_of_plates
         pileseq = [str(i).rjust(3, '0') for i in range(1, num_of_plates + 1)]
         markno = ["SP-RS-%s-%s" % (pile, i) for i in pileseq]
