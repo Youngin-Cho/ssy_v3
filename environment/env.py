@@ -128,8 +128,8 @@ class SteelStockYard(object):
         node_features_for_pile = np.zeros((num_of_node_for_pile, self.state_size["pile"]))
         node_features_for_crane = np.zeros((num_of_node_for_crane, self.state_size["crane"]))
 
-        all_x_coords = np.array([i for i in range(44)] * len(self.bays))
-        all_y_coords = np.array([0 for _ in range(44)] + [1 for _ in range(44)])
+        all_x_coords = np.array([i for i in range(1, 45)] * len(self.bays))
+        all_y_coords = np.array([1 for _ in range(1, 45)] + [2 for _ in range(1, 45)])
 
         for i, crane_name in enumerate(self.crane_list):
             info = self.model.crane_info[crane_name]

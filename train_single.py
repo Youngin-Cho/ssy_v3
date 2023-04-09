@@ -65,11 +65,11 @@ if __name__ == "__main__":
     min_eps = cfg.min_eps
     worker = cfg.worker
 
-    model_dir = '/output/train/model/'
+    model_dir = './output/train/model/'
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    log_dir = '/output/train/log/'
+    log_dir = './output/train/log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -125,19 +125,21 @@ if __name__ == "__main__":
                 vessl.log(payload={"Epsilon": eps}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
                 vessl.log(payload={"Loss": loss_avg}, step=episode)
+                # writer.add_scalar("Training/Epsilon", eps, episode)
+                # writer.add_scalar("Training/Reward", reward_tot, episode)
+                # writer.add_scalar("Training/Loss", loss_avg, episode)
 
                 reward_tot = 0.0
                 loss_list = []
 
                 break
 
-        # writer.add_scalar("Training/Epsilon", eps, frame)
         eps = max(max_eps - ((episode * d_eps) / eps_steps), min_eps)
 
         if episode % eval_every == 0 or episode == 1:
             makespan = evaluate(validation_dir)
-            # writer.add_scalar("Validation/Makespan", makespan, frame)
             vessl.log(payload={"Makespan": makespan}, step=episode)
+            # writer.add_scalar("Validation/Makespan", makespan, episode)
             with open(log_dir + "validation_log.csv", 'a') as f:
                 f.write('%d,%1.2f\n' % (episode, makespan))
 
