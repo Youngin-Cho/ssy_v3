@@ -34,14 +34,19 @@ class NoisyLinear(nn.Linear):
         self.weight.data.uniform_(-std, std)
         self.bias.data.uniform_(-std, std)
 
-    def forward(self, input):
+    def forward(self, input, noisy=True):
         # sample random noise in sigma weight buffer and bias buffer
-        self.epsilon_weight.normal_()
-        bias = self.bias
-        if bias is not None:
-            self.epsilon_bias.normal_()
-            bias = bias + self.sigma_bias * self.epsilon_bias
-        return F.linear(input, self.weight + self.sigma_weight * self.epsilon_weight, bias)
+        if noisy:
+            self.epsilon_weight.normal_()
+            weight = self.weight + self.sigma_weight * self.epsilon_weight
+            bias = self.bias
+            if bias is not None:
+                self.epsilon_bias.normal_()
+                bias = bias + self.sigma_bias * self.epsilon_bias
+        else:
+            weight = self.weight
+            bias = self.bias
+        return F.linear(input, weight, bias)
 
 
 class Network(nn.Module):
@@ -55,14 +60,13 @@ class Network(nn.Module):
         self.N = N
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(1, self.n_cos + 1)]).view(1, 1, self.n_cos).to(device)
-        layer = Linear
 
         self.conv1 = HGTConv(88, 512, meta_data, head=4)
         self.conv2 = HGTConv(512, 512, meta_data, head=4)
         self.cos_embedding = nn.Linear(self.n_cos, 512)
         self.ff_1 = NoisyLinear(512, 512)
-        self.advantage = layer(512, action_size)
-        self.value = layer(512, 1)
+        self.advantage = NoisyLinear(512, action_size)
+        self.value = NoisyLinear(512, 1)
         # self.ff_2 = NoisyLinear(512, action_size)
 
     def calc_cos(self, batch_size, n_tau=8):
@@ -75,7 +79,7 @@ class Network(nn.Module):
         assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
         return cos, taus
 
-    def forward(self, input, num_tau=8):
+    def forward(self, input, num_tau=8, noisy=True):
         """
         Quantile Calculation depending on the number of tau
 
@@ -103,15 +107,15 @@ class Network(nn.Module):
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
         x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 512)
 
-        x = torch.selu(self.ff_1(x))
-        advantage = self.advantage(x)
-        value = self.value(x)
+        x = torch.selu(self.ff_1(x, noisy=noisy))
+        advantage = self.advantage(x, noisy=noisy)
+        value = self.value(x, noisy=noisy)
         out = value + advantage - advantage.mean(dim=1, keepdim=True)
         # out = self.ff_2(x)
 
         return out.view(batch_size, num_tau, self.action_size), taus
 
-    def get_qvalues(self, inputs):
-        quantiles, _ = self.forward(inputs, self.N)
+    def get_qvalues(self, inputs, noisy=True):
+        quantiles, _ = self.forward(inputs, self.N, noisy=noisy)
         actions = quantiles.mean(dim=1)
         return actions

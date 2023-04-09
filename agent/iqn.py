@@ -147,14 +147,13 @@ class Agent():
 
         return loss
 
-    def get_action(self, state, possible_actions, eps=0.0):
+    def get_action(self, state, possible_actions, eps=0.0, noisy=True):
         state = Batch.from_data_list(state).to(device)
 
         if random.random() >= eps:  # select greedy action if random number is higher than epsilon or noisy network is used!
             self.qnetwork_local.eval()
             with torch.no_grad():
-                action_values = self.qnetwork_local.get_qvalues(state)
-            self.qnetwork_local.train()
+                action_values = self.qnetwork_local.get_qvalues(state, noisy=noisy)
             action_values = action_values.cpu().data.numpy()
             mask = np.ones_like(action_values)
             for i in range(len(possible_actions)):
@@ -193,7 +192,7 @@ class Agent():
         Q_target = (self.gamma ** self.n_step * (pi_target * (Q_targets_next - tau_log_pi_next) * (1 - dones.unsqueeze(-1))).sum(2)).unsqueeze(1)
         assert Q_target.shape == (self.batch_size, 1, self.N)
 
-        q_k_target = self.qnetwork_target.get_qvalues(states).detach()
+        q_k_target = self.qnetwork_target.get_qvalues(states, noisy=True).detach()
         v_k_target = q_k_target.max(1)[0].unsqueeze(-1)
         tau_log_pik = q_k_target - v_k_target - self.entropy_tau * torch.logsumexp((q_k_target - v_k_target) / self.entropy_tau, 1).unsqueeze(-1)
 
@@ -206,7 +205,7 @@ class Agent():
         # Compute Q targets for current states
         Q_targets = munchausen_reward + Q_target
         # Get expected Q values from local model
-        q_k, taus = self.qnetwork_local(states, self.N)
+        q_k, taus = self.qnetwork_local(states, self.N, noisy=True)
         Q_expected = q_k.gather(2, actions.unsqueeze(-1).expand(self.batch_size, self.N, 1))
         assert Q_expected.shape == (self.batch_size, self.N, 1)
 

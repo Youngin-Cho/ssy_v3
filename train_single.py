@@ -26,7 +26,7 @@ def evaluate(validation_dir):
 
         while not done:
             possible_actions = test_env.get_possible_actions()
-            action = agent.get_action([state], [possible_actions], eps=0.0)
+            action = agent.get_action([state], [possible_actions], eps=0.0, noisy=False)
             next_state, r, done = test_env.step(action[0])
             state = next_state
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
         while True:
             possible_actions = env.get_possible_actions()
-            action = agent.get_action([state], [possible_actions], eps=0.0)
+            action = agent.get_action([state], [possible_actions], eps=0.0, noisy=True)
             next_state, reward, done = env.step(action[0])
 
             loss = agent.step(state, action[0], reward, next_state, done)
