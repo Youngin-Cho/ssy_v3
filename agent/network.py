@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,6 +8,40 @@ from torch_geometric.nn import HGTConv, Linear, global_add_pool
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device('mps:0' if torch.backends.mps.is_available() else 'cpu')
+
+
+class NoisyLinear(nn.Linear):
+    # Noisy Linear Layer for independent Gaussian Noise
+    def __init__(self, in_features, out_features, sigma_init=0.017, bias=True):
+        super(NoisyLinear, self).__init__(in_features, out_features, bias=bias)
+        # make the sigmas trainable:
+        self.sigma_weight = nn.Parameter(torch.full((out_features, in_features), sigma_init))
+        # not trainable tensor for the nn.Module
+        self.register_buffer("epsilon_weight", torch.zeros(out_features, in_features))
+        # extra parameter for the bias and register buffer for the bias parameter
+        if bias:
+            self.sigma_bias = nn.Parameter(torch.full((out_features,), sigma_init))
+            self.register_buffer("epsilon_bias", torch.zeros(out_features))
+
+        # reset parameter as initialization of the layer
+        self.reset_parameter()
+
+    def reset_parameter(self):
+        """
+        initialize the parameter of the layer and bias
+        """
+        std = math.sqrt(3 / self.in_features)
+        self.weight.data.uniform_(-std, std)
+        self.bias.data.uniform_(-std, std)
+
+    def forward(self, input):
+        # sample random noise in sigma weight buffer and bias buffer
+        self.epsilon_weight.normal_()
+        bias = self.bias
+        if bias is not None:
+            self.epsilon_bias.normal_()
+            bias = bias + self.sigma_bias * self.epsilon_bias
+        return F.linear(input, self.weight + self.sigma_weight * self.epsilon_weight, bias)
 
 
 class Network(nn.Module):
@@ -25,8 +60,10 @@ class Network(nn.Module):
         self.conv1 = HGTConv(88, 512, meta_data, head=4)
         self.conv2 = HGTConv(512, 512, meta_data, head=4)
         self.cos_embedding = nn.Linear(self.n_cos, 512)
-        self.ff_1 = layer(512, 512)
-        self.ff_2 = layer(512, action_size)
+        self.ff_1 = NoisyLinear(512, 512)
+        self.advantage = layer(512, action_size)
+        self.value = layer(512, 1)
+        # self.ff_2 = NoisyLinear(512, action_size)
 
     def calc_cos(self, batch_size, n_tau=8):
         """
@@ -67,7 +104,10 @@ class Network(nn.Module):
         x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 512)
 
         x = torch.selu(self.ff_1(x))
-        out = self.ff_2(x)
+        advantage = self.advantage(x)
+        value = self.value(x)
+        out = value + advantage - advantage.mean(dim=1, keepdim=True)
+        # out = self.ff_2(x)
 
         return out.view(batch_size, num_tau, self.action_size), taus
 

@@ -107,7 +107,6 @@ class Agent():
         self.action_size = action_size
         self.tau = tau
         self.N = N
-        self.K = 32
         self.entropy_tau = 0.03
         self.lo = -1
         self.alpha = 0.9

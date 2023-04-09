@@ -60,16 +60,16 @@ if __name__ == "__main__":
     lr = cfg.lr
     gamma = cfg.gamma
     tau = cfg.tau
-    eps_steps = cfg.eps_steps
-    max_eps = cfg.max_eps
-    min_eps = cfg.min_eps
+    # eps_steps = cfg.eps_steps
+    # max_eps = cfg.max_eps
+    # min_eps = cfg.min_eps
     worker = cfg.worker
 
-    model_dir = './output/train/model/'
+    model_dir = '/output/train/model/'
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    log_dir = './output/train/log/'
+    log_dir = '/output/train/log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -97,8 +97,8 @@ if __name__ == "__main__":
     with open(log_dir + "validation_log.csv", 'w') as f:
         f.write('frame, makespan\n')
 
-    eps = min_eps
-    d_eps = max_eps - min_eps
+    # eps = min_eps
+    # d_eps = max_eps - min_eps
 
     for episode in range(start_episode, n_episode + 1):
         state = env.reset()
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
         while True:
             possible_actions = env.get_possible_actions()
-            action = agent.get_action([state], [possible_actions], eps=eps)
+            action = agent.get_action([state], [possible_actions], eps=0.0)
             next_state, reward, done = env.step(action[0])
 
             loss = agent.step(state, action[0], reward, next_state, done)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
                 loss_avg = sum(loss_list) / len(loss_list)
 
                 print("episode: %d | total_rewards: %.2f | average_loss: %.2f" % (episode, reward_tot, loss_avg))
-                vessl.log(payload={"Epsilon": eps}, step=episode)
+                # vessl.log(payload={"Epsilon": eps}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
                 vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
                 break
 
-        eps = max(max_eps - ((episode * d_eps) / eps_steps), min_eps)
+        # eps = max(max_eps - ((episode * d_eps) / eps_steps), min_eps)
 
         if episode % eval_every == 0 or episode == 1:
             makespan = evaluate(validation_dir)
