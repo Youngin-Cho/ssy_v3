@@ -99,10 +99,10 @@ class Network(nn.Module):
 
         cos, taus = self.calc_cos(batch_size, num_tau)  # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)
-        cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, 512)  # (batch, n_tau, layer)
+        cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, 256)  # (batch, n_tau, layer)
 
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
-        x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 512)
+        x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 256)
 
         x = torch.relu(self.ff_1(x, noisy=noisy))
         advantage = self.advantage(x, noisy=noisy)
