@@ -124,7 +124,7 @@ class Agent():
         self.qnetwork_target = Network(state_size, action_size, meta_data, look_ahead, N).to(device)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
-        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=lr)
+        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step, parallel_env=worker)
