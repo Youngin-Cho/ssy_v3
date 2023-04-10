@@ -61,8 +61,9 @@ class Network(nn.Module):
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(1, self.n_cos + 1)]).view(1, 1, self.n_cos).to(device)
 
-        self.conv1 = HGTConv(88, 512, meta_data, head=4)
-        self.conv2 = HGTConv(512, 512, meta_data, head=4)
+        self.conv1 = HGTConv(88, 256, meta_data, head=4)
+        self.conv2 = HGTConv(256, 256, meta_data, head=4)
+        self.conv3 = HGTConv(256, 256, meta_data, head=4)
         self.cos_embedding = nn.Linear(self.n_cos, 512)
         self.ff_1 = NoisyLinear(512, 512)
         self.advantage = NoisyLinear(512, action_size)
@@ -79,15 +80,7 @@ class Network(nn.Module):
         assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
         return cos, taus
 
-    def forward(self, input, num_tau=8, noisy=True):
-        """
-        Quantile Calculation depending on the number of tau
-
-        Return:
-        quantiles [ shape of (batch_size, num_tau, action_size)]
-        taus [shape of ((batch_size, num_tau, 1))]
-
-        """
+    def forward(self, input, num_tau=8, crane_id=1, noisy=True):
         batch_size = input.num_graphs
         x_dict, edge_index_dict = input.x_dict, input.edge_index_dict
 
@@ -95,10 +88,13 @@ class Network(nn.Module):
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
         x_dict = self.conv2(x_dict, edge_index_dict)
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
+        x_dict = self.conv3(x_dict, edge_index_dict)
+        x_dict = {key: F.selu(x) for key, x in x_dict.items()}
 
         batch_idx = torch.arange(batch_size).to(device)
         batch_idx = batch_idx.repeat_interleave(int(x_dict["pile"].size(0) / batch_size))
-        x = x_dict["crane"][:, 0:512] + global_add_pool(x_dict["pile"], batch_idx)
+        num_crane = int(x_dict["crane"].size(0) / batch_size)
+        x = torch.cat((x_dict["crane"][int(crane_id - 1)::num_crane, :], global_add_pool(x_dict["pile"], batch_idx)), dim=1)
 
         cos, taus = self.calc_cos(batch_size, num_tau)  # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)
