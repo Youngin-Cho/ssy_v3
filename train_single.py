@@ -64,7 +64,7 @@ if __name__ == "__main__":
     max_lr = cfg.max_lr,
     step_size_up = cfg.step_size_up
     step_size_down = cfg.step_size_down
-    lr_decay = cfg.lr_decay
+    # lr_decay = cfg.lr_decay
     gamma = cfg.gamma
     tau = cfg.tau
     # eps_steps = cfg.eps_steps
