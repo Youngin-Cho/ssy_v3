@@ -63,7 +63,7 @@ class Network(nn.Module):
 
         self.conv1 = HGTConv(88, 512, meta_data, head=4)
         self.conv2 = HGTConv(512, 512, meta_data, head=4)
-        self.conv3 = HGTConv(512, 512, meta_data, head=4)
+        # self.conv3 = HGTConv(512, 512, meta_data, head=4)
         self.cos_embedding = nn.Linear(self.n_cos, 512)
         self.ff_1 = NoisyLinear(512, 512)
         self.ff_2 = NoisyLinear(512, 512)
@@ -89,8 +89,8 @@ class Network(nn.Module):
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
         x_dict = self.conv2(x_dict, edge_index_dict)
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
-        x_dict = self.conv3(x_dict, edge_index_dict)
-        x_dict = {key: F.selu(x) for key, x in x_dict.items()}
+        # x_dict = self.conv3(x_dict, edge_index_dict)
+        # x_dict = {key: F.selu(x) for key, x in x_dict.items()}
 
         batch_idx = torch.arange(batch_size).to(device)
         batch_idx = batch_idx.repeat_interleave(int(x_dict["pile"].size(0) / batch_size))
