@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from torch_geometric.data import Batch
+from torch.optim.lr_scheduler import ExponentialLR
 from collections import deque
 from agent.network import Network
 
@@ -17,7 +18,7 @@ class PrioritizedReplay(object):
     Proportional Prioritization
     """
 
-    def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_frames=10000,
+    def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_steps=10000,
                  parallel_env=4):
         self.capacity = capacity
         self.batch_size = batch_size
@@ -25,7 +26,7 @@ class PrioritizedReplay(object):
         self.n_step = n_step
         self.alpha = alpha
         self.beta_start = beta_start
-        self.beta_frames = beta_frames
+        self.beta_steps = beta_steps
         self.parallel_env = parallel_env
 
         self.frame = 1  # for beta calculation
@@ -43,7 +44,7 @@ class PrioritizedReplay(object):
         return n_step_buffer[0][0], n_step_buffer[0][1], Return, n_step_buffer[-1][3], n_step_buffer[-1][4]
 
     def beta_by_frame(self, frame_idx):
-        return min(1.0, self.beta_start + frame_idx * (1.0 - self.beta_start) / self.beta_frames)
+        return min(1.0, self.beta_start + frame_idx * (1.0 - self.beta_start) / self.beta_steps)
 
     def add(self, state, action, reward, next_state, done):
         if self.iter_ == self.parallel_env:
@@ -102,7 +103,7 @@ class PrioritizedReplay(object):
 
 class Agent():
     def __init__(self, state_size, action_size, meta_data, look_ahead,
-                 n_step, batch_size, capacity, lr, tau, gamma, N, worker):
+                 n_step, batch_size, capacity, lr, lr_decay, tau, gamma, N, worker, alpha, beta_start, beta_steps):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -125,9 +126,11 @@ class Agent():
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
         self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)
+        self.scheduler = ExponentialLR(optimizer=self.optimizer, gamma=lr_decay)
 
         # Replay memory
-        self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step, parallel_env=worker)
+        self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,
+                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps, parallel_env=worker)
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
