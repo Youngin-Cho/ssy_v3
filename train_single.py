@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
                 print("episode: %d | total_rewards: %.2f | average_loss: %.2f" % (episode, reward_tot, loss_avg))
                 # vessl.log(payload={"Epsilon": eps}, step=episode)
-                vessl.log(payload={"Learnig Rate": agent.scheduler.get_last_lr()[0]}, step=episode)
+                vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
                 vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
