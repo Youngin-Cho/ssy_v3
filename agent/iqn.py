@@ -5,7 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from torch_geometric.data import Batch
-from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import CyclicLR
 from collections import deque
 from agent.network import Network
 
@@ -103,7 +103,8 @@ class PrioritizedReplay(object):
 
 class Agent():
     def __init__(self, state_size, action_size, meta_data, look_ahead,
-                 n_step, batch_size, capacity, lr, lr_decay, tau, gamma, N, worker, alpha, beta_start, beta_steps):
+                 capacity, alpha, beta_start, beta_steps,
+                 n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -125,8 +126,9 @@ class Agent():
         self.qnetwork_target = Network(state_size, action_size, meta_data, look_ahead, N).to(device)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
-        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)
-        self.scheduler = ExponentialLR(optimizer=self.optimizer, gamma=lr_decay)
+        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=base_lr)
+        self.scheduler = CyclicLR(optimizer=self.optimizer, base_lr=base_lr, max_lr=max_lr,
+                                  step_size_up=step_size_up, step_size_down=step_size_down, mode="trianglar2")
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,

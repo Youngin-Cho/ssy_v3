@@ -60,7 +60,10 @@ if __name__ == "__main__":
     beta_steps = cfg.beta_steps
     batch_size = cfg.batch_size
     N = cfg.N
-    lr = cfg.lr
+    base_lr = cfg.base_lr
+    max_lr = cfg.max_lr,
+    step_size_up = cfg.step_size_up
+    step_size_down = cfg.step_size_down
     lr_decay = cfg.lr_decay
     gamma = cfg.gamma
     tau = cfg.tau
