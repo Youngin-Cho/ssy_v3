@@ -128,7 +128,7 @@ class Agent():
 
         self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=base_lr)
         self.scheduler = CyclicLR(optimizer=self.optimizer, base_lr=base_lr, max_lr=max_lr,
-                                  step_size_up=step_size_up, step_size_down=step_size_down, mode="trianglar2")
+                                  step_size_up=step_size_up, step_size_down=step_size_down, mode="triangular2")
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,
