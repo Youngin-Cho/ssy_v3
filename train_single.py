@@ -87,7 +87,8 @@ if __name__ == "__main__":
                          num_of_reshuffle_to_piles=n_resh_to, num_of_retrieval_from_piles=n_retr_from)
 
     agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
-                  n_step, batch_size, capacity, lr, lr_decay, tau, gamma, N, worker, alpha, beta_start, beta_steps)
+                  capacity, alpha, beta_start, beta_steps,
+                  n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
     # writer = SummaryWriter(log_dir)
 
     if cfg.load_model:
