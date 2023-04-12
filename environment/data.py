@@ -5,6 +5,23 @@ import numpy as np
 import pandas as pd
 
 
+def get_coord(name):
+    x = float(name[1:]) + 1
+    y = 1
+
+    if 23 <= x <= 25:
+        x += 1
+    elif x >= 26:
+        x += 2
+
+    if name[0] == "A" or name[0] == "C" or name[0] == "E" or name[0] == "S":
+        y = 1
+    elif name[0] == "B" or name[0] == "D" or name[0] == "F" or name[0] == "T":
+        y = 2
+
+    return (x, y)
+
+
 def read_data(file_name, bay=1, num_crane=1):
     df = pd.read_csv(file_name, encoding="CP949")
 
@@ -61,6 +78,7 @@ def generate_data(num_of_storage_to_piles=10,  # 적치 작업 시 강재를 적
                   num_of_reshuffle_to_piles=20,   # 선별 작업 시 강재가 이동할 파일의 수
                   num_of_retrieval_from_piles=4,   # 출고 작업 시 이동할 강재가 적치된 파일의 수
                   bays=("A", "B"),  # 강재적치장의 베이 이름
+                  safety_margin=5,
                   file_path=None):
 
     # 입고, 선별, 출고 데이터를 저장하기 위한 데이터프레임 생성
@@ -107,17 +125,25 @@ def generate_data(num_of_storage_to_piles=10,  # 적치 작업 시 강재를 적
     reshuffle_to_piles = random.sample(piles_all, num_of_reshuffle_to_piles)
 
     for pile in reshuffle_from_piles:
+        x_coord = get_coord(pile)[0]
+        if x_coord < 1 + safety_margin:
+            reshuffle_to_piles_rev = [i for i in reshuffle_to_piles if get_coord(i)[0] <= 43 - safety_margin]
+        elif x_coord > 43 - safety_margin:
+            reshuffle_to_piles_rev = [i for i in reshuffle_to_piles if get_coord(i)[0] >= 1 + safety_margin]
+        else:
+            reshuffle_to_piles_rev = reshuffle_to_piles
         # num_of_plates = random.randint(150, 201)
         num_of_plates = random.randint(15, 21)
         pileno = [pile] * num_of_plates
         pileseq = [str(i).rjust(3, '0') for i in range(1, num_of_plates + 1)]
         markno = ["SP-RS-%s-%s" % (pile, i) for i in pileseq]
         unitw = np.random.uniform(0.141, 19.294, num_of_plates)
-        topile = random.choices(reshuffle_to_piles, k=num_of_plates)
+        topile = random.choices(reshuffle_to_piles_rev, k=num_of_plates)
         df_temp = pd.DataFrame({"pileno": pileno, "pileseq": pileseq, "markno": markno, "unitw": unitw, "topile": topile})
         df_reshuffle = pd.concat([df_reshuffle, df_temp], ignore_index=True)
 
     piles_misc = [i for i in piles_all if i not in reshuffle_from_piles]
+    piles_misc = [i for i in piles_misc if get_coord(i)[0] <= 43 - safety_margin]
 
     # 입고 작업 대상 강재 데이터 생성
     storage_from_piles = [bays[0] + "00", bays[1] + "00"]

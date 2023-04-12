@@ -152,13 +152,13 @@ class Agent():
 
         return loss
 
-    def get_action(self, state, possible_actions, eps=0.0, noisy=True):
+    def get_action(self, state, possible_actions, eps=0.0, noisy=True, crane_id=0):
         state = Batch.from_data_list(state).to(device)
 
         if random.random() >= eps:  # select greedy action if random number is higher than epsilon or noisy network is used!
             self.qnetwork_local.eval()
             with torch.no_grad():
-                action_values = self.qnetwork_local.get_qvalues(state, noisy=noisy)
+                action_values = self.qnetwork_local.get_qvalues(state, noisy=noisy, crane_id=crane_id)
             action_values = action_values.cpu().data.numpy()
             mask = np.ones_like(action_values)
             for i in range(len(possible_actions)):
