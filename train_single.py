@@ -41,7 +41,7 @@ def evaluate(validation_dir):
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    # vessl.init(organization="snu-eng-dgx", project="S", hp=cfg)
+    vessl.init(organization="snu-eng-dgx", project="S", hp=cfg)
 
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
@@ -72,11 +72,11 @@ if __name__ == "__main__":
     # min_eps = cfg.min_eps
     worker = cfg.worker
 
-    model_dir = './output/train/model/'
+    model_dir = '/output/train/model/'
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    log_dir = './output/train/log/'
+    log_dir = '/output/train/log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -117,8 +117,6 @@ if __name__ == "__main__":
         while True:
             possible_actions = env.get_possible_actions()
             action = agent.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=env.crane_in_decision)
-            # f not env.model.piles[env.action_mapping[action[0]]].name in env.model.move_list:
-            #     print(0)
             next_state, reward, done = env.step(action[0])
 
             loss = agent.step(state, action[0], reward, next_state, done)
@@ -133,9 +131,9 @@ if __name__ == "__main__":
 
                 print("episode: %d | total_rewards: %.2f | average_loss: %.2f" % (episode, reward_tot, loss_avg))
                 # vessl.log(payload={"Epsilon": eps}, step=episode)
-                # vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
-                # vessl.log(payload={"Reward": reward_tot}, step=episode)
-                # vessl.log(payload={"Loss": loss_avg}, step=episode)
+                vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
+                vessl.log(payload={"Reward": reward_tot}, step=episode)
+                vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
                 # writer.add_scalar("Training/Reward", reward_tot, episode)
                 # writer.add_scalar("Training/Loss", loss_avg, episode)
@@ -149,7 +147,7 @@ if __name__ == "__main__":
 
         if episode % eval_every == 0 or episode == 1:
             makespan = evaluate(validation_dir)
-            # vessl.log(payload={"Makespan": makespan}, step=episode)
+            vessl.log(payload={"Makespan": makespan}, step=episode)
             # writer.add_scalar("Validation/Makespan", makespan, episode)
             with open(log_dir + "validation_log.csv", 'a') as f:
                 f.write('%d,%1.2f\n' % (episode, makespan))
