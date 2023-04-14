@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 
 from collections import OrderedDict
+from utilities import get_coord, get_moving_time
 
 
-random.seed(42)
+# random.seed(42)
 
 class PriorityGet(simpy.resources.base.Get):
     def __init__(self, resource, priority=10, preempt=True):
@@ -22,28 +23,6 @@ class PriorityBaseStore(simpy.resources.store.Store):
 
     GetQueue = simpy.resources.resource.SortedQueue
     get = simpy.core.BoundClass(PriorityGet)
-
-
-def get_coord(name):
-    x = float(name[1:]) + 1
-    y = 1
-
-    if 23 <= x <= 25:
-        x += 1
-    elif x >= 26:
-        x += 2
-
-    if name[0] == "A" or name[0] == "C" or name[0] == "E" or name[0] == "S":
-        y = 1
-    elif name[0] == "B" or name[0] == "D" or name[0] == "F" or name[0] == "T":
-        y = 2
-
-    return (x, y)
-
-
-def cal_dist(loc1, loc2):
-    distance = 2 * abs(loc1[0] - loc2[0]) + abs(loc1[1] - loc2[1])
-    return distance
 
 
 class Plate:
@@ -68,6 +47,7 @@ class Crane:
         self.name = name
         self.current_location = location
         self.target_location = None
+        self.safety_location = None
 
         self.w_limit = 8.0
         self.status = 0  # 0: waiting, 1: working, 2: avoiding
@@ -78,8 +58,6 @@ class Crane:
         self.opposite = None
         self.waiting = False
         self.waiting_event = self.env.event()
-        # self.safety_event = self.env.event()
-        # self.target_event = self.env.event()
         self.target_pile = None
 
         self.moving = True
@@ -98,61 +76,24 @@ class Crane:
         pile.plates.append(plate)
         return plate.name
 
-    def move(self, location, tag, monitor, target_pile=None):
-        self.target_location = location
-        self.target_coord = location.coord
-
+    def move(self, location):
         self.moving = True
-
-        if type(location).__name__ == "Conveyor":
-            self.target_coord.append(self.current_coord[1])
-
-        distance = max(2 * abs(self.target_coord[0] - self.current_coord[0]), abs(self.target_coord[1] - self.current_coord[1]))
+        moving_time = get_moving_time(self.current_location, location)
 
         self.initial_coord = self.current_coord
         self.start = self.env.now
-        self.expected_finish = self.env.now + distance
+        self.expected_finish = self.env.now + moving_time
 
-        if (self.opposite.expected_finish != 0) & (self.opposite.moving):
-            self.opposite.current_coord = (self.opposite.initial_coord[0] + (self.env.now - self.opposite.start) /
-                                           (self.opposite.expected_finish - self.opposite.start) *
-                                           (self.opposite.target_coord[0] - self.opposite.initial_coord[0]),
-                                           self.opposite.initial_coord[1] + (self.env.now - self.opposite.start) /
-                                           (self.opposite.expected_finish - self.opposite.start) *
-                                           (self.opposite.target_coord[1] - self.opposite.initial_coord[1]))
-            # print('@@@@@@@@@@@@@@@START_UPDATE@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-            # print(self.name, self.current_coord)
-            # print(self.opposite.name, self.opposite.current_coord)
-            # print('time:', self.env.now)
-            # print('start:', (self.start - self.opposite.start))
+        if self.opposite.expected_finish != 0 and self.opposite.moving:
+            self.opposite.update_location(self.env.now)
 
-        monitor.record(self.env.now, "Move_from", crane=self.name, location=self.current_location.name, plate=None, tag=tag)
+        yield self.env.timeout(moving_time)
 
-        yield self.env.timeout(distance)
-
-        monitor.record(self.env.now, "Move_to", crane=self.name, location=self.current_location.name, plate=None, tag=tag)
-
-        if (self.opposite.expected_finish != 0) & (self.opposite.moving):
-            self.opposite.current_coord = (self.opposite.initial_coord[0] + (self.env.now - self.opposite.start) /
-                                           (self.opposite.expected_finish - self.opposite.start) *
-                                           (self.opposite.target_coord[0] - self.opposite.initial_coord[0]),
-                                           self.opposite.initial_coord[1] + (self.env.now - self.opposite.start) /
-                                           (self.opposite.expected_finish - self.opposite.start) *
-                                           (self.opposite.target_coord[1] - self.opposite.initial_coord[1]))
+        if self.opposite.expected_finish != 0 and self.opposite.moving:
+            self.opposite.update_location(self.env.now)
 
         self.current_location = location
         self.current_coord = location.coord
-        self.target_location = target_pile
-        if target_pile is None:
-            self.target_coord = (None, None)
-        else:
-            self.target_coord = target_pile.coord
-
-        # print('@@@@@@@@@@@@@@@FINISH_UPDATE@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-        # print(self.name, self.current_coord)
-        # print(self.opposite.name, self.opposite.current_coord)
-        # print('time:', self.env.now)
-        # print('start:', (self.start - self.opposite.start))
 
         if self.status == 2:
             self.status = 1
@@ -161,7 +102,13 @@ class Crane:
 
         self.moving = False
 
-        return distance
+        return moving_time
+
+    def update_location(self, time):
+        ratio = (time - self.start) / (self.expected_finish - self.start)
+        x_coord = self.initial_coord[0] + ratio * (self.target_coord[0] - self.initial_coord[0])
+        y_coord = self.initial_coord[1] + ratio * (self.target_coord[1] - self.initial_coord[1])
+        self.current_coord = (x_coord, y_coord)
 
 
 class Conveyor:
@@ -213,7 +160,7 @@ class Management:
         self.bays = bays
         self.safety_margin = safety_margin
 
-        self.env, self.piles, self.conveyors, self.cranes, self.monitor, self.distance_table = self._modeling()
+        self.env, self.piles, self.conveyors, self.cranes, self.monitor = self._modeling()
         self.move_list = list(df_storage["pileno"].values) + list(df_reshuffle["pileno"].values)
         self.blocked_piles = list()
         self.last_action = None
@@ -240,17 +187,11 @@ class Management:
 
         pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in self.bays for col_id in range(0, 41)]
         piles = OrderedDict({name: Pile(name, get_coord(name)) for name in pile_list})
-        pile_dist = pd.DataFrame([[cal_dist(from_pile.coord, to_pile.coord) for to_pile in piles.values()]
-                                  for from_pile in piles.values()], index=piles.keys(), columns=piles.keys())
 
         conveyors = OrderedDict()
         conveyors['cn1'] = Conveyor('cn1', 23, 0.01)
         conveyors['cn2'] = Conveyor('cn2', 27, 0.01)
         conveyors['cn3'] = Conveyor('cn3', 44, 0.0005)
-        conveyor_dist = pd.DataFrame([[abs(conveyor.coord[0] - pile.coord[0]) for pile in piles.values()]
-                                      for conveyor in conveyors.values()], index=conveyors.keys(), columns=piles.keys())
-
-        distance_table = pd.concat([pile_dist, conveyor_dist])
 
         # 적치 작업 대상 강재 데이터
         self.df_storage = self.df_storage.sort_values(by=["pileno", "pileseq"])
@@ -283,7 +224,7 @@ class Management:
 
         monitor = Monitor()
 
-        return env, piles, conveyors, cranes, monitor, distance_table
+        return env, piles, conveyors, cranes, monitor
 
     def run(self):
         while self.move_list:
@@ -323,13 +264,21 @@ class Management:
 
     def crane_run(self, crane, action):
         if action == "Waiting":
+            crane.status = 0
             crane.waiting = True
             crane.waiting_event = self.env.event()
+
             waiting_start = self.env.now
+            self.monitor.record(self.env.now, "Waiting Start", crane=crane.name, location=crane.current_location.name)
+
             yield crane.waiting_event
+
             waiting_finish = self.env.now
+            self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name, location=crane.current_location.name)
+
             crane.idle_time += waiting_finish - waiting_start
         else:
+            crane.status = 1
             from_pile = self.piles[action]
             to_pile = self.piles[from_pile.plates[-1].to_pile]
 
@@ -340,7 +289,7 @@ class Management:
                 tag = "Reshuflle"
 
             # empty travel
-            crane.target_pile = from_pile
+            crane.target_location = from_pile
             crane.target_coord = from_pile.coord
             yield self.env.process(self.collision_avoidance(crane, from_pile, tag))
 
@@ -350,12 +299,12 @@ class Management:
                                 location=crane.current_location.name, plate=plate_name, tag=tag)
 
             # full travel
-            crane.target_pile = to_pile
+            crane.target_location = to_pile
             crane.target_coord = to_pile.coord
             yield self.env.process(self.collision_avoidance(crane, to_pile, tag))
 
             # drop-off
-            crane.target_pile = None
+            crane.target_location = None
             crane.target_coord = (-1.0, -1.0)
             crane.status = 0
             plate_name = crane.put_plate(to_pile)
@@ -369,90 +318,73 @@ class Management:
         # release a crane
         yield self.cranes.put(crane)
 
-    def collision_avoidance(self, crane, target_pile, tag):
-        # case1
-        if crane.opposite.status == 0:
-            crane.status = 1
-            distance = yield self.env.process(crane.move(target_pile, tag, self.monitor))
+    def collision_avoidance(self, crane, target_location, tag):
+        interference = self.check_interference(crane)
+        if interference:
+            safety_location = self.get_safety_location(crane)
 
-            if len(crane.plates) == 0:
-                crane.idle_time += distance
+            moving_time_crane = get_moving_time(crane.current_location, safety_location)
+            moving_time_opposite_crane = get_moving_time(crane.opposite.current_location, crane.opposite.target_location)
 
-        # case2
-        elif crane.opposite.status == 1:
-            if (crane.name == 'Crane-1') & (crane.target_coord[0] >= crane.opposite.target_coord[0])\
-                    | (crane.name == 'Crane-2') & (crane.target_coord[0] <= crane.opposite.target_coord[0]):
-                if crane.name == 'Crane-1':
-                    safety_zone = (crane.opposite.target_coord[0] - self.safety_margin, crane.opposite.target_coord[1])
-                    if safety_zone[0] in [23, 27]:
-                        safety_zone = (crane.opposite.target_coord[0] - self.safety_margin - 1, crane.opposite.target_coord[1])
-                    safety_pile = self.pile_info[safety_zone]
+            self.monitor.record(self.env.now, "Move_from", crane=crane.name,
+                                location=crane.current_location.name, plate=None, tag=tag)
+            yield self.env.process(crane.move(safety_location))
+            self.monitor.record(self.env.now, "Move_to", crane=crane.name,
+                                location=crane.current_location.name, plate=None, tag=tag)
+
+            if moving_time_crane < moving_time_opposite_crane:
+                yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
+
+            self.monitor.record(self.env.now, "Move_from", crane=crane.name,
+                                location=crane.current_location.name, plate=None, tag=tag)
+            yield self.env.process(crane.move(target_location))
+            self.monitor.record(self.env.now, "Move_to", crane=crane.name,
+                                location=crane.current_location.name, plate=None, tag=tag)
+
+        else:
+            self.monitor.record(self.env.now, "Move_from", crane=crane.name,
+                                location=crane.current_location.name, plate=None, tag=tag)
+            moving_time = yield self.env.process(crane.move(target_location))
+            self.monitor.record(self.env.now, "Move_to", crane=crane.name,
+                                location=crane.current_location.name, plate=None, tag=tag)
+
+    def get_safety_location(self, crane):
+        if crane.name == 'Crane-1':
+            safety_location_coord = (crane.opposite.target_coord[0] - self.safety_margin, crane.opposite.target_coord[1])
+            if safety_location_coord[0] in [23, 27]:
+                safety_location_coord = (crane.opposite.target_coord[0] - self.safety_margin - 1, crane.opposite.target_coord[1])
+            safety_location = self.pile_info[safety_location_coord]
+        else:
+            safety_location_coord = (crane.opposite.target_coord[0] + self.safety_margin, crane.opposite.target_coord[1])
+            if safety_location_coord[0] in [23, 27]:
+                safety_location_coord = (crane.opposite.target_coord[0] + self.safety_margin + 1, crane.opposite.target_coord[1])
+            safety_location = self.pile_info[safety_location_coord]
+        return safety_location
+
+    def check_interference(self, crane):
+        if crane.opposite.idle:
+            interference = False
+        else:
+            target_xcoord_crane = crane.target_coord[0]
+            target_xcoord_opposite_crane = crane.opposite.target_coord[0]
+
+            if (crane.name == 'Crane-1' and target_xcoord_crane >= target_xcoord_opposite_crane) \
+                or (crane.name == 'Crane-2' and target_xcoord_crane <= target_xcoord_opposite_crane):
+
+                safety_location = self.get_safety_location(crane)
+
+                moving_time_crane = get_moving_time(crane.current_location, safety_location)
+                moving_time_opposite_crane \
+                    = get_moving_time(crane.opposite.current_location, crane.opposite.target_location)
+
+                if moving_time_crane >= moving_time_opposite_crane:
+                    interference = False
                 else:
-                    safety_zone = (crane.opposite.target_coord[0] + self.safety_margin, crane.opposite.target_coord[1])
-                    if safety_zone[0] in [23, 27]:
-                        safety_zone = (crane.opposite.target_coord[0] + self.safety_margin + 1, crane.opposite.target_coord[1])
-                    safety_pile = self.pile_info[safety_zone]
-                crane.status = 2
-                distance_cr = max(2 * abs(safety_pile.coord[0] - crane.current_coord[0]), abs(safety_pile.coord[1] - crane.current_coord[1]))
-                distance_op = max(2 * abs(crane.opposite.target_coord[0] - crane.opposite.current_coord[0]), abs(crane.opposite.target_coord[1] - crane.opposite.current_coord[1]))
-                yield self.env.process(crane.move(safety_pile, tag, self.monitor, target_pile))
-
-                if len(crane.plates) == 0:
-                    crane.idle_time += distance_cr
-
-                if distance_cr < distance_op:
-                    yield self.env.timeout(distance_op - distance_cr)
-
-                crane.target_coord = target_pile.coord
-
-                crane.status = 1
-                yield self.env.process(crane.move(target_pile, tag, self.monitor))
-
+                    interference = True
             else:
-                crane.status = 1
-                distance = yield self.env.process(crane.move(target_pile, tag, self.monitor))
-                if len(crane.plates) == 0:
-                    crane.idle_time += distance
+                interference = False
 
-        # case3
-        elif crane.opposite.status == 2:
-            yield self.env.timeout(max(2 * abs(crane.opposite.target_coord[0] - crane.opposite.current_coord[0]), abs(crane.opposite.target_coord[1] - crane.opposite.current_coord[1])))
-
-            if (crane.name == 'Crane-1') & (crane.target_coord[0] >= crane.opposite.target_coord[0]) \
-                    | (crane.name == 'Crane-2') & (crane.target_coord[0] <= crane.opposite.target_coord[0]):
-                if crane.name == 'Crane-1':
-                    safety_zone = (crane.opposite.target_coord[0] - self.safety_margin, crane.opposite.target_coord[1])
-                    if safety_zone[0] in [23, 27]:
-                        safety_zone = (crane.opposite.target_coord[0] - self.safety_margin - 1, crane.opposite.target_coord[1])
-                    safety_pile = self.pile_info[safety_zone]
-                else:
-                    safety_zone = (crane.opposite.target_coord[0] + self.safety_margin, crane.opposite.target_coord[1])
-                    if safety_zone[0] in [23, 27]:
-                        safety_zone = (crane.opposite.target_coord[0] + self.safety_margin + 1, crane.opposite.target_coord[1])
-                    safety_pile = self.pile_info[safety_zone]
-                crane.status = 2
-                distance_cr = max(2 * abs(crane.target_coord[0] - crane.current_coord[0]),
-                                  abs(crane.target_coord[1] - crane.current_coord[1]))
-                distance_op = max(2 * abs(crane.opposite.target_coord[0] - crane.opposite.current_coord[0]),
-                                  abs(crane.opposite.target_coord[1] - crane.opposite.current_coord[1]))
-                yield self.env.process(crane.move(safety_pile, tag, self.monitor, target_pile))
-
-                if len(crane.plates) == 0:
-                    crane.idle_time += distance_cr
-
-                if distance_cr < distance_op:
-                    yield self.env.timeout(distance_op - distance_cr)
-
-                crane.target_coord = target_pile.coord
-
-                crane.status = 1
-                yield self.env.process(crane.move(target_pile, tag, self.monitor))
-
-            else:
-                crane.status = 1
-                distance = yield self.env.process(crane.move(target_pile, tag, self.monitor))
-                if len(crane.plates) == 0:
-                    crane.idle_time += distance
+        return interference
 
     # 이동 대상 파일에 선별 작업을 수행해야 할 다른 강재가 적치되어 있어서
     # 당장 적치되어 있는 강재를 이동하는 것이 불가능한 파일을 식별

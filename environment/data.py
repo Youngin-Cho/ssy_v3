@@ -1,25 +1,9 @@
 import os
 import random
-
 import numpy as np
 import pandas as pd
 
-
-def get_coord(name):
-    x = float(name[1:]) + 1
-    y = 1
-
-    if 23 <= x <= 25:
-        x += 1
-    elif x >= 26:
-        x += 2
-
-    if name[0] == "A" or name[0] == "C" or name[0] == "E" or name[0] == "S":
-        y = 1
-    elif name[0] == "B" or name[0] == "D" or name[0] == "F" or name[0] == "T":
-        y = 2
-
-    return (x, y)
+from utilities import get_coord
 
 
 def read_data(file_name, bay=1, num_crane=1):
