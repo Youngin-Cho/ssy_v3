@@ -182,7 +182,7 @@ class Management:
         self.idle_time = {crane.name: 0 for crane in self.cranes.items}  # empty travel 단계의 이동거리
         self.idle_time_cum = {crane.name: 0 for crane in self.cranes.items}
 
-        self.pile_info = {pile.coord: pile for pile in self.piles.values()} # coord를 통해 pile 호출
+        self.pile_info = {tuple(pile.coord): pile for pile in self.piles.values()} # coord를 통해 pile 호출
         for cn, coord in self.conveyors.items():
             self.pile_info[coord] = cn
 
@@ -225,8 +225,8 @@ class Management:
 
         cranes = PriorityBaseStore(env)
 
-        crane1 = Crane(env, 'Crane-1', piles[self.bays[0] + "01"])
-        crane2 = Crane(env, 'Crane-2', piles[self.bays[0] + "40"])
+        crane1 = Crane(env, 'Crane-1', piles[self.bays[0] + "01"], self.safety_margin)
+        crane2 = Crane(env, 'Crane-2', piles[self.bays[0] + "40"], self.safety_margin)
 
         crane1.opposite = crane2
         crane2.opposite = crane1
@@ -248,16 +248,9 @@ class Management:
 
             self.crane_info[crane.name]["Current Coord"] = crane.current_coord
             self.crane_info[crane.name]["Target Coord"] = crane.target_coord
-            self.crane_info[crane.name]["Status"] = crane.status
 
             self.crane_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
             self.crane_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
-            self.crane_info[crane.opposite.name]["Status"] = crane.opposite.status
-
-            self.idle_time[crane.name] = crane.idle_time - self.idle_time_cum[crane.name]
-            self.idle_time[crane.opposite.name] = crane.opposite.idle_time - self.idle_time_cum[crane.opposite.name]
-            self.idle_time_cum[crane.name] = crane.idle_time
-            self.idle_time_cum[crane.opposite.name] = crane.opposite.idle_time
 
             # 행동 선택을 위한 이벤트 생성
             self.decision_time = True
@@ -320,7 +313,7 @@ class Management:
             crane.target_location = None
             crane.target_coord = (-1.0, -1.0)
 
-            if crane.opposite.waiting:
+            if crane.opposite.idle:
                 crane.opposite.idle_event.succeed()
 
         # release a crane
@@ -342,13 +335,15 @@ class Management:
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=crane.current_location.name, plate=None, tag=tag)
             yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
-            yield self.env.process(crane.move(crane.target_location))
+            yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
+                                              to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=crane.current_location.name, plate=None, tag=tag)
         else:
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=crane.current_location.name, plate=None, tag=tag)
-            moving_time_crane = yield self.env.process(crane.move(crane.target_location))
+            moving_time_crane = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
+                                                                  to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=crane.current_location.name, plate=None, tag=tag)
 
