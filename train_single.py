@@ -109,7 +109,7 @@ if __name__ == "__main__":
     # d_eps = max_eps - min_eps
 
     for episode in range(start_episode, n_episode + 1):
-        state = env.reset()
+        state, _ = env.reset()
         reward_tot = 0.0
         loss_list = []
         done = False
@@ -117,7 +117,7 @@ if __name__ == "__main__":
         while True:
             possible_actions = env.get_possible_actions()
             action = agent.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=env.crane_in_decision)
-            next_state, reward, done = env.step(action[0])
+            next_state, reward, done, _ = env.step(action[0])
 
             loss = agent.step(state, action[0], reward, next_state, done)
             if loss is not None:

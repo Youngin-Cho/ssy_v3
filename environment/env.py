@@ -81,8 +81,9 @@ class SteelStockYard(object):
         next_state = self._get_state()
 
         self.crane_in_decision = self.model.crane_in_decision
+        info = {"crane_id": self.crane_in_decision}
 
-        return next_state, reward, done
+        return next_state, reward, done, info
 
     def reset(self):
         if self.random_data:
@@ -104,8 +105,9 @@ class SteelStockYard(object):
                 self.model.env.step()
 
         self.crane_in_decision = self.model.crane_in_decision
+        info = {"crane_id": self.crane_in_decision}
 
-        return self._get_state()
+        return self._get_state(), info
 
     def get_possible_actions(self):
         possbile_actions = []

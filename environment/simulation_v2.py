@@ -343,28 +343,39 @@ class Management:
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             moving_time = yield self.env.process(crane.move(to_xcoord=safety_xcoord))
-            if opposite_direction:
-                crane.wasting_time += moving_time
-            crane.safety_xcoord = -1.0
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
+            crane.safety_xcoord = -1.0
+
+            if len(crane.plates) == 0:
+                crane.wasting_time += moving_time
+            else:
+                if opposite_direction:
+                    crane.wasting_time += moving_time
 
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             if moving_time_opposite_crane > moving_time_crane:
                 yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
                 crane.wasting_time += moving_time_opposite_crane - moving_time_crane
-            yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
+            moving_time = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
                                               to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
+
+            if len(crane.plates) == 0:
+                crane.wasting_time += moving_time
+
         else:
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
-            moving_time_crane = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
+            moving_time = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
                                                                   to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
+
+            if len(crane.plates) == 0:
+                crane.wasting_time += moving_time
 
     def check_interference(self, crane):
         if crane.opposite.idle:
