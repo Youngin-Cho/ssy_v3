@@ -21,13 +21,13 @@ def evaluate(validation_dir):
         test_env = SteelStockYard(look_ahead=look_ahead, df_storage=df_storage,
                                   df_reshuffle=df_reshuffle, df_retrieval=df_retrieval)
 
-        state = test_env.reset()
+        state, _ = test_env.reset()
         done = False
 
         while not done:
             possible_actions = test_env.get_possible_actions()
             action = agent.get_action([state], [possible_actions], eps=0.0, noisy=False, crane_id=env.crane_in_decision)
-            next_state, r, done = test_env.step(action[0])
+            next_state, r, done, _ = test_env.step(action[0])
             state = next_state
 
             if done:
