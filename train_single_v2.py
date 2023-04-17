@@ -132,10 +132,6 @@ if __name__ == "__main__":
 
         state, info = env.reset()
         crane_in_decision = info["crane_id"]
-        if crane_in_decision == 0:
-            sample_crane1.append(state)
-        else:
-            sample_crane2.append(state)
 
         while True:
             possible_actions = env.get_possible_actions()
@@ -146,17 +142,23 @@ if __name__ == "__main__":
             next_state, reward, done, info = env.step(action[0])
 
             if info["crane_id"] == 0:
-                sample_crane1 = sample_crane1 + [action[0], reward, next_state, done]
-                loss = agent_crane1.step(*sample_crane1)
-                sample_crane1 = [next_state]
-                if loss is not None:
-                    loss_crane1_list.append(loss)
+                if len(sample_crane1) == 0:
+                    sample_crane1.append(state)
+                else:
+                    sample_crane1 = sample_crane1 + [action[0], reward, next_state, done]
+                    loss = agent_crane1.step(*sample_crane1)
+                    sample_crane1 = [next_state]
+                    if loss is not None:
+                        loss_crane1_list.append(loss)
             else:
-                sample_crane2 = sample_crane2 + [action[0], reward, next_state, done]
-                loss = agent_crane2.step(*sample_crane2)
-                sample_crane2 = [next_state]
-                if loss is not None:
-                    loss_crane2_list.append(loss)
+                if len(sample_crane2) == 0:
+                    sample_crane2.append(state)
+                else:
+                    sample_crane2 = sample_crane2 + [action[0], reward, next_state, done]
+                    loss = agent_crane2.step(*sample_crane2)
+                    sample_crane2 = [next_state]
+                    if loss is not None:
+                        loss_crane2_list.append(loss)
 
             state = next_state
             reward_tot += reward
