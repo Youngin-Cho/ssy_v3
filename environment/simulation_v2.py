@@ -58,8 +58,9 @@ class Crane:
 
         self.moving = False
         self.x_velocity = 0.5
-        self.y_velocity = 1
-        self.update_time = 0
+        self.y_velocity = 1.0
+        self.update_time = 0.0
+        self.wasting_time = 0.0
 
     def get_plate(self, pile):
         plate = pile.plates.pop()
@@ -181,11 +182,10 @@ class Management:
         self.move_list = list(df_storage["pileno"].values) + list(df_reshuffle["pileno"].values)
         self.blocked_piles = list()
         self.last_action = None
-        self.crane_info = {crane.name: {"Current Coord": crane.current_coord,
-                                        "Target Coord": (-1.0, -1.0),
-                                        "Status": 0} for crane in self.cranes.items}
-        self.idle_time = {crane.name: 0 for crane in self.cranes.items}  # empty travel 단계의 이동거리
-        self.idle_time_cum = {crane.name: 0 for crane in self.cranes.items}
+        self.state_info = {crane.name: {"Current Coord": crane.current_coord,
+                                        "Target Coord": (-1.0, -1.0)} for crane in self.cranes.items}
+        self.reward_info = {crane.name: {"Wasting Time": 0.0,
+                                         "Wasting Time Cumulative": 0.0} for crane in self.cranes.items}
 
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()} # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
@@ -252,11 +252,17 @@ class Management:
             crane = yield self.cranes.get(priority=3)
             self.crane_in_decision = int(crane.name.split("-")[-1]) - 1
 
-            self.crane_info[crane.name]["Current Coord"] = crane.current_coord
-            self.crane_info[crane.name]["Target Coord"] = crane.target_coord
+            self.state_info[crane.name]["Current Coord"] = crane.current_coord
+            self.state_info[crane.name]["Target Coord"] = crane.target_coord
+            self.state_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
+            self.state_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
 
-            self.crane_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
-            self.crane_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
+            self.reward_info[crane.name]["Wasting Time"] \
+                = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
+            self.reward_info[crane.opposite.name]["Wasting Time"] \
+                = crane.opposite.wasting_time - self.reward_info[crane.opposite.name]["Wasting Time Cumulative"]
+            self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
+            self.reward_info[crane.opposite.name]["Wasting Time Cumulative"] = crane.opposite.wasting_time
 
             # 행동 선택을 위한 이벤트 생성
             self.decision_time = True
@@ -280,13 +286,13 @@ class Management:
 
             waiting_start = self.env.now
             self.monitor.record(self.env.now, "Waiting Start", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord])
+                                location=self.location_mapping[crane.current_coord].name)
 
             yield crane.idle_event
 
             waiting_finish = self.env.now
             self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord])
+                                location=self.location_mapping[crane.current_coord].name)
         else:
             crane.idle = False
             from_pile = self.piles[action]
@@ -305,7 +311,7 @@ class Management:
             # pick-up
             plate_name = crane.get_plate(from_pile)
             self.monitor.record(self.env.now, "Pick_up", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=plate_name, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=plate_name, tag=tag)
 
             # full travel
             crane.target_coord = to_pile.coord
@@ -314,7 +320,7 @@ class Management:
             # drop-off
             plate_name = crane.put_plate(to_pile)
             self.monitor.record(self.env.now, "Put_down", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=plate_name, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=plate_name, tag=tag)
 
             if not crane.opposite.idle_event.triggered:
                 crane.opposite.idle_event.succeed()
@@ -328,32 +334,37 @@ class Management:
         avoidance, safety_xcoord = self.check_interference(crane)
         if avoidance:
             crane.safety_xcoord = safety_xcoord
+            opposite_direction = True if np.sign(crane.safety_xcoord - crane.current_coord[0]) \
+                                        != np.sign(crane.target_coord[0] - crane.current_coord[0]) else False
             moving_time_crane = crane.get_moving_time(to_xcoord=safety_xcoord)
             moving_time_opposite_crane = crane.opposite.get_moving_time(to_xcoord=crane.opposite.target_coord[0],
                                                                         to_ycoord=crane.opposite.target_coord[1])
 
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=None, tag=tag)
-            yield self.env.process(crane.move(to_xcoord=safety_xcoord))
-            self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=None, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
+            moving_time = yield self.env.process(crane.move(to_xcoord=safety_xcoord))
+            if opposite_direction:
+                crane.wasting_time += moving_time
             crane.safety_xcoord = -1.0
+            self.monitor.record(self.env.now, "Move_to", crane=crane.name,
+                                location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
 
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=None, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             if moving_time_opposite_crane > moving_time_crane:
                 yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
+                crane.wasting_time += moving_time_opposite_crane - moving_time_crane
             yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
                                               to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=None, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
         else:
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=None, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             moving_time_crane = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
                                                                   to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord], plate=None, tag=tag)
+                                location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
 
     def check_interference(self, crane):
         if crane.opposite.idle:

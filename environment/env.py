@@ -141,10 +141,10 @@ class SteelStockYard(object):
         return log
 
     def _calculate_reward(self):
-        idle_time = 0
-        for crane_name in self.model.idle_time.keys():
-            idle_time += self.model.idle_time[crane_name]
-        reward = 1 / idle_time if idle_time != 0 else 1
+        wasting_time = 0
+        for crane_name in self.model.reward_info.keys():
+            wasting_time += self.model.reward_info[crane_name]["Wasting Time"]
+        reward = 1 / wasting_time if wasting_time != 0 else 1
 
         return reward
 
@@ -167,7 +167,7 @@ class SteelStockYard(object):
         all_y_coords = np.array([1 for _ in range(1, 45)] + [2 for _ in range(1, 45)])
 
         for i, crane_name in enumerate(self.crane_list):
-            info = self.model.crane_info[crane_name]
+            info = self.model.state_info[crane_name]
             crane_current_x = info["Current Coord"][0]
             crane_current_y = info["Current Coord"][1]
             crane_target_x = info["Target Coord"][0]
