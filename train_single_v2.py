@@ -79,7 +79,8 @@ if __name__ == "__main__":
 
     model_dir = '/output/train/model/'
     if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+        os.makedirs(model_dir + 'crane1/')
+        os.makedirs(model_dir + 'crane2/')
 
     log_dir = '/output/train/log/'
     if not os.path.exists(log_dir):
