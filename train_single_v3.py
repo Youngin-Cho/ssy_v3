@@ -44,7 +44,7 @@ def evaluate(validation_dir):
                 else:
                     action = agent_crane2.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=env.crane_in_decision)[0]
 
-            next_state, r, done, info = test_env.step(action[0])
+            next_state, r, done, info = test_env.step(action)
             state = next_state
             crane_in_decision = info["crane_id"]
 
