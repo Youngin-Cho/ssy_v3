@@ -133,8 +133,8 @@ class SteelStockYard(object):
             if possible:
                 possbile_actions.append(self.action_mapping_inverse[from_pile_name])
 
-            if len(possbile_actions) == 0:
-                possbile_actions.append(0)
+        if len(possbile_actions) == 0:
+            possbile_actions.append(0)
 
         return possbile_actions
 

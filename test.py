@@ -41,17 +41,19 @@ if __name__ == "__main__":
         env = SteelStockYard(look_ahead=3, df_storage=df_storage,
                              df_reshuffle=df_reshuffle, df_retrieval=df_retrieval)
 
-        state = env.reset()
+        state, info = env.reset()
+        crane_in_decision = info["crane_id"]
         done = False
 
         while not done:
             possible_actions = env.get_possible_actions()
             if algorithm == "RL":
-                action = agent.get_action([state], [possible_actions], eps=0.0)
+                action = agent.get_action([state], [possible_actions], eps=0.0, noisy=False, crane_id=env.crane_in_decision)
             else:
-                action = agent(state, possible_actions)
-            next_state, reward, done = env.step(action)
+                action = agent(state, possible_actions, crane_id=crane_in_decision)
+            next_state, reward, done, info = env.step(action)
             state = next_state
+            crane_in_decision = info["crane_id"]
 
             if done:
                 log = env.get_logs(simulation_dir + 'event_log_{0}_{1}.csv'.format(algorithm, i))
