@@ -13,6 +13,7 @@ def get_cfg():
     parser.add_argument("--n_resh_to", type=int, default=20, help="number of reshuffle to piles")
     parser.add_argument("--n_retr_from", type=int, default=4, help="number of retreival from piles")
 
+    parser.add_argument("--mode", type=str, default="both", help="training mode")
     parser.add_argument("--n_episode", type=int, default=10000, help="Number of episodes to train")
     parser.add_argument("--eval_every", type=int, default=100, help="Evaluate every x frames")
     parser.add_argument("--save_every", type=int, default=1000, help="Save a model every x frames")
