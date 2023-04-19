@@ -197,8 +197,8 @@ class Management:
         self.do_action = self.env.event()
 
         self.action = self.env.process(self.run())
-        # if df_retrieval is not None:
-        #     self.action_conveyor = [self.env.process(self.release(cn)) for cn in self.conveyors.values()]
+        if df_retrieval is not None:
+            self.action_conveyor = [self.env.process(self.release(cn)) for cn in self.conveyors.values()]
 
     def _modeling(self):
         env = simpy.Environment()
@@ -276,8 +276,8 @@ class Management:
 
             self.env.process(self.crane_run(crane, action))
 
-        # for action in self.action_conveyor:
-        #     action.interrupt()
+        for action in self.action_conveyor:
+            action.interrupt()
 
     def crane_run(self, crane, action):
         if action == "Waiting":
@@ -444,38 +444,37 @@ class Management:
                 candidates = [i for i in self.df_retrieval["pileno"].unique()
                               if conveyor.name in self.df_retrieval["topile"] and len(self.piles[i].plates) > 0]
 
+                tag = "Retrieval"
                 # 생성된 파일 리스트에서 랜덤하게 파일을 하나 선택하고 해당 파일에 적치된 강재에 대한 출고 작업 수행
                 if len(candidates) > 0:
+                    crane.idle = False
+
                     from_pile_name = random.choice(candidates)
                     from_pile = self.piles[from_pile_name]
 
                     # empty travel
-                    self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                        location=crane.current_location.name, plate=None, tag="Retrieval")
-                    distance = yield self.env.process(crane.move(from_pile))
-                    self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                        location=crane.current_location.name, plate=None, tag="Retrieval")
+                    crane.target_coord = from_pile.coord
+                    yield self.env.process(self.collision_avoidance(crane, tag))
 
                     # pick-up
                     plate_name = crane.get_plate(from_pile)
                     self.monitor.record(self.env.now, "Pick_up", crane=crane.name,
-                                        location=crane.current_location.name, plate=plate_name, tag="Retrieval")
+                                        location=self.location_mapping[crane.current_coord].name, plate=plate_name, tag=tag)
 
                     # full travel
-                    self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                        location=crane.current_location.name, plate=plate_name, tag="Retrieval")
-                    yield self.env.process(crane.move(conveyor))
-                    self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                        location=crane.current_location.name, plate=plate_name, tag="Retrieval")
+                    crane.target_coord = (conveyor.coord[0], crane.current_coord[1])
+                    yield self.env.process(self.collision_avoidance(crane, tag))
 
                     # drop-off
                     plate_name = crane.put_plate(conveyor)
                     self.monitor.record(self.env.now, "Put_down", crane=crane.name,
-                                        location=crane.current_location.name, plate=plate_name, tag="Retrieval")
+                                        location=self.location_mapping[crane.current_coord].name, plate=plate_name, tag=tag)
 
-                    self.crane_info[crane.name]["Current Coord"] = crane.current_coord
-                    self.crane_info[crane.name]["Target Coord"] = (-1.0, -1.0)
-                    self.crane_info[crane.name]["Status"] = 0
+                    if not crane.opposite.idle_event.triggered:
+                        crane.opposite.idle_event.succeed()
+
+                crane.idle = True
+                crane.target_coord = (-1.0, -1.0)
 
                 # release a crane
                 yield self.cranes.put(crane)
