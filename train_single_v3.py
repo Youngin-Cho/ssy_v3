@@ -79,11 +79,9 @@ if __name__ == "__main__":
     beta_steps = cfg.beta_steps
     batch_size = cfg.batch_size
     N = cfg.N
-    base_lr = cfg.base_lr
-    max_lr = cfg.max_lr,
-    step_size_up = cfg.step_size_up
-    step_size_down = cfg.step_size_down
-    # lr_decay = cfg.lr_decay
+    lr = cfg.lr
+    lr_step = cfg.lr_step,
+    lr_decay = cfg.lr_decay
     gamma = cfg.gamma
     tau = cfg.tau
     worker = cfg.worker
@@ -113,20 +111,20 @@ if __name__ == "__main__":
     if mode == "both":
         agent_crane1 = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
                              capacity, alpha, beta_start, beta_steps,
-                             n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                             n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, worker)
         agent_crane2 = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
                              capacity, alpha, beta_start, beta_steps,
-                             n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                             n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, worker)
     elif mode == "crane1":
         agent_crane1 = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
                              capacity, alpha, beta_start, beta_steps,
-                             n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                             n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, worker)
         agent_crane2 = shortest_distance
     else:
         agent_crane1 = shortest_distance
         agent_crane2 = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
                              capacity, alpha, beta_start, beta_steps,
-                             n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                             n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, worker)
 
     # writer = SummaryWriter(log_dir)
 
@@ -240,14 +238,16 @@ if __name__ == "__main__":
                 else:
                     loss_crane2_avg = sum(loss_crane2_list) / len(loss_crane2_list)
 
-                vessl.log(payload={"LearnigRate": agent_crane1.scheduler.get_last_lr()[0]}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
                 if mode == "both":
+                    vessl.log(payload={"LearnigRate": agent_crane1.scheduler.get_last_lr()[0]}, step=episode)
                     vessl.log(payload={"Loss/Crane1": loss_crane1_avg}, step=episode)
                     vessl.log(payload={"Loss/Crane2": loss_crane2_avg}, step=episode)
                 elif mode == "crane1":
+                    vessl.log(payload={"LearnigRate": agent_crane1.scheduler.get_last_lr()[0]}, step=episode)
                     vessl.log(payload={"Loss/Crane1": loss_crane1_avg}, step=episode)
                 else:
+                    vessl.log(payload={"LearnigRate": agent_crane2.scheduler.get_last_lr()[0]}, step=episode)
                     vessl.log(payload={"Loss/Crane2": loss_crane2_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
                 # writer.add_scalar("Training/Reward", reward_tot, episode)
