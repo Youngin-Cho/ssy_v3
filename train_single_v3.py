@@ -80,7 +80,7 @@ if __name__ == "__main__":
     batch_size = cfg.batch_size
     N = cfg.N
     lr = cfg.lr
-    lr_step = cfg.lr_step,
+    lr_step = cfg.lr_step
     lr_decay = cfg.lr_decay
     gamma = cfg.gamma
     tau = cfg.tau
