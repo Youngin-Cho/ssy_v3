@@ -149,14 +149,14 @@ class SteelStockYard(object):
         # reward = 1 / wasting_time if wasting_time != 0 else 1
         if self.crane_in_decision == 0:
             increased_time = self.model.env.now - self.model.crane1_decision_time
-            # reward = - self.model.reward_info["Crane-1"]["Wasting Time"]
+            reward = - self.model.reward_info["Crane-1"]["Wasting Time"]
         else:
             increased_time = self.model.env.now - self.model.crane2_decision_time
-            # reward = - self.model.reward_info["Crane-2"]["Wasting Time"]
-        reward = 1 / increased_time if increased_time != 0 else 0
+            reward = - self.model.reward_info["Crane-2"]["Wasting Time"]
+        # reward = 1 / increased_time if increased_time != 0 else 0
         # reward = 1 / reward if reward != 0 else 1
 
-        return reward
+        return reward / 87
 
     def _get_state(self):
         state = HeteroData()
