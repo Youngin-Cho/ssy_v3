@@ -27,10 +27,7 @@ def evaluate(validation_dir):
 
         while not done:
             possible_actions = test_env.get_possible_actions()
-            if crane_in_decision == 0:
-                action = agent_crane1.get_action([state], [possible_actions], eps=0.0, noisy=False, crane_id=env.crane_in_decision)
-            else:
-                action = agent_crane2.get_action([state], [possible_actions], eps=0.0, noisy=False, crane_id=env.crane_in_decision)
+            action = agent.get_action([state], [possible_actions], eps=0.0, noisy=False, crane_id=crane_in_decision)
             next_state, r, done, info = test_env.step(action[0])
             state = next_state
             crane_in_decision = info["crane_id"]
@@ -65,22 +62,16 @@ if __name__ == "__main__":
     beta_steps = cfg.beta_steps
     batch_size = cfg.batch_size
     N = cfg.N
-    base_lr = cfg.base_lr
-    max_lr = cfg.max_lr,
-    step_size_up = cfg.step_size_up
-    step_size_down = cfg.step_size_down
-    # lr_decay = cfg.lr_decay
+    lr = cfg.lr
+    lr_step = cfg.lr_step
+    lr_decay = cfg.lr_decay
     gamma = cfg.gamma
     tau = cfg.tau
-    # eps_steps = cfg.eps_steps
-    # max_eps = cfg.max_eps
-    # min_eps = cfg.min_eps
     worker = cfg.worker
 
     model_dir = '/output/train/model/'
     if not os.path.exists(model_dir):
-        os.makedirs(model_dir + 'crane1/')
-        os.makedirs(model_dir + 'crane2/')
+        os.makedirs(model_dir)
 
     log_dir = '/output/train/log/'
     if not os.path.exists(log_dir):
@@ -92,12 +83,9 @@ if __name__ == "__main__":
                          num_of_storage_to_piles=n_stor_to, num_of_reshuffle_from_piles=n_resh_from,
                          num_of_reshuffle_to_piles=n_resh_to, num_of_retrieval_from_piles=n_retr_from)
 
-    agent_crane1 = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
-                         capacity, alpha, beta_start, beta_steps,
-                         n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
-    agent_crane2 = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
-                         capacity, alpha, beta_start, beta_steps,
-                         n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+    agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
+                  capacity, alpha, beta_start, beta_steps,
+                  n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, worker)
     # writer = SummaryWriter(log_dir)
 
     # if cfg.load_model:
@@ -118,9 +106,6 @@ if __name__ == "__main__":
     with open(log_dir + "validation_log.csv", 'w') as f:
         f.write('frame, makespan\n')
 
-    # eps = min_eps
-    # d_eps = max_eps - min_eps
-
     for episode in range(start_episode, n_episode + 1):
         reward_tot = 0.0
         done = False
@@ -128,38 +113,34 @@ if __name__ == "__main__":
         sample_crane1 = []
         sample_crane2 = []
 
-        loss_crane1_list = []
-        loss_crane2_list = []
-
+        loss_list = []
         state, info = env.reset()
         crane_in_decision = info["crane_id"]
 
         while True:
             possible_actions = env.get_possible_actions()
-            if crane_in_decision == 0:
-                action = agent_crane1.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=env.crane_in_decision)
-            else:
-                action = agent_crane2.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=env.crane_in_decision)
+            action = agent.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=crane_in_decision)
             next_state, reward, done, info = env.step(action[0])
 
             if info["crane_id"] == 0:
                 if len(sample_crane1) == 0:
                     sample_crane1.append(state)
+                    loss = None
                 else:
                     sample_crane1 = sample_crane1 + [action[0], reward, next_state, done]
-                    loss = agent_crane1.step(*sample_crane1)
+                    loss = agent.step(*sample_crane1)
                     sample_crane1 = [next_state]
-                    if loss is not None:
-                        loss_crane1_list.append(loss)
             else:
                 if len(sample_crane2) == 0:
                     sample_crane2.append(state)
+                    loss = None
                 else:
                     sample_crane2 = sample_crane2 + [action[0], reward, next_state, done]
-                    loss = agent_crane2.step(*sample_crane2)
+                    loss = agent.step(*sample_crane2)
                     sample_crane2 = [next_state]
-                    if loss is not None:
-                        loss_crane2_list.append(loss)
+
+            if loss is not None:
+                loss_list.append(loss)
 
             state = next_state
             reward_tot += reward
@@ -167,25 +148,17 @@ if __name__ == "__main__":
 
             if done:
 
-                loss_crane1_avg = sum(loss_crane1_list) / len(loss_crane1_list)
-                loss_crane2_avg = sum(loss_crane2_list) / len(loss_crane2_list)
+                loss_avg = sum(loss_list) / len(loss_list)
+                print("episode: %d | total_rewards: %.2f | loss: %.2f" % (episode, reward_tot, loss_avg))
 
-                print("episode: %d | total_rewards: %.2f" % (episode, reward_tot))
-                # vessl.log(payload={"Epsilon": eps}, step=episode)
-                vessl.log(payload={"LearnigRate": agent_crane1.scheduler.get_last_lr()[0]}, step=episode)
+                vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
-                vessl.log(payload={"Loss/Crane1": loss_crane1_avg}, step=episode)
-                vessl.log(payload={"Loss/Crane2": loss_crane2_avg}, step=episode)
+                vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
                 # writer.add_scalar("Training/Reward", reward_tot, episode)
                 # writer.add_scalar("Training/Loss", loss_avg, episode)
 
-                reward_tot = 0.0
-                loss_list = []
-
                 break
-
-        # eps = max(max_eps - ((episode * d_eps) / eps_steps), min_eps)
 
         if episode % eval_every == 0 or episode == 1:
             makespan = evaluate(validation_dir)
@@ -195,10 +168,8 @@ if __name__ == "__main__":
                 f.write('%d,%1.2f\n' % (episode, makespan))
 
         if episode % save_every == 0:
-            agent_crane1.save(episode, model_dir + "crane1/")
-            agent_crane2.save(episode, model_dir + "crane2/")
+            agent.save(episode, model_dir)
 
-        agent_crane1.scheduler.step()
-        agent_crane2.scheduler.step()
+        agent.scheduler.step()
 
     # writer.close()
