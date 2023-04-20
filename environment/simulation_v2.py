@@ -293,7 +293,7 @@ class Management:
             waiting_finish = self.env.now
             self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name)
-            crane.wasting_time += waiting_finish - waiting_start
+            # crane.wasting_time += waiting_finish - waiting_start
         else:
             crane.idle = False
             from_pile = self.piles[action]
