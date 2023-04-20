@@ -194,6 +194,8 @@ class Management:
 
         self.decision_time = False
         self.crane_in_decision = None
+        self.crane1_decision_time = 0.0
+        self.crane2_decision_time = 0.0
         self.do_action = self.env.event()
 
         self.action = self.env.process(self.run())
@@ -251,6 +253,10 @@ class Management:
             # request a crane
             crane = yield self.cranes.get(priority=3)
             self.crane_in_decision = int(crane.name.split("-")[-1]) - 1
+            if self.crane_in_decision == 0:
+                self.crane1_decision_time = self.env.now
+            else:
+                self.crane2_decision_time = self.env.now
 
             self.state_info[crane.name]["Current Coord"] = crane.current_coord
             self.state_info[crane.name]["Target Coord"] = crane.target_coord
