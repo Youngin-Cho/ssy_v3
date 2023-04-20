@@ -127,7 +127,7 @@ if __name__ == "__main__":
                     sample_crane1.append(state)
                     loss = None
                 else:
-                    sample_crane1 = sample_crane1 + [action[0], reward, next_state, done]
+                    sample_crane1 = sample_crane1 + [action[0], reward, next_state, done, crane_in_decision]
                     loss = agent.step(*sample_crane1)
                     sample_crane1 = [next_state]
             else:
@@ -135,7 +135,7 @@ if __name__ == "__main__":
                     sample_crane2.append(state)
                     loss = None
                 else:
-                    sample_crane2 = sample_crane2 + [action[0], reward, next_state, done]
+                    sample_crane2 = sample_crane2 + [action[0], reward, next_state, done, crane_in_decision]
                     loss = agent.step(*sample_crane2)
                     sample_crane2 = [next_state]
 

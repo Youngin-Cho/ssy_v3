@@ -19,7 +19,7 @@ class PrioritizedReplay(object):
     """
 
     def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_steps=10000,
-                 parallel_env=4):
+                 num_agents=2):
         self.capacity = capacity
         self.batch_size = batch_size
         self.gamma = gamma
@@ -27,14 +27,13 @@ class PrioritizedReplay(object):
         self.alpha = alpha
         self.beta_start = beta_start
         self.beta_steps = beta_steps
-        self.parallel_env = parallel_env
+        self.num_agents = num_agents
 
         self.frame = 1  # for beta calculation
         self.buffer = []
         self.pos = 0
         self.priorities = np.zeros((capacity,), dtype=np.float32)
-        self.n_step_buffer = [deque(maxlen=self.n_step) for i in range(parallel_env)]
-        self.iter_ = 0
+        self.n_step_buffer = [deque(maxlen=self.n_step) for i in range(num_agents)]
 
     def calc_multistep_return(self, n_step_buffer):
         Return = 0
@@ -46,14 +45,11 @@ class PrioritizedReplay(object):
     def beta_by_frame(self, frame_idx):
         return min(1.0, self.beta_start + frame_idx * (1.0 - self.beta_start) / self.beta_steps)
 
-    def add(self, state, action, reward, next_state, done):
-        if self.iter_ == self.parallel_env:
-            self.iter_ = 0
-
+    def add(self, state, action, reward, next_state, done, crane_id):
         # n_step calc
-        self.n_step_buffer[self.iter_].append((state, action, reward, next_state, done))
-        if len(self.n_step_buffer[self.iter_]) == self.n_step:
-            state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[self.iter_])
+        self.n_step_buffer[int(crane_id)].append((state, action, reward, next_state, done))
+        if len(self.n_step_buffer[crane_id]) == self.n_step:
+            state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[crane_id])
 
         max_prio = self.priorities.max() if self.buffer else 1.0  # gives max priority if buffer is not empty else 1
 
@@ -64,7 +60,6 @@ class PrioritizedReplay(object):
 
         self.priorities[self.pos] = max_prio
         self.pos = (self.pos + 1) % self.capacity
-        self.iter_ += 1
 
     def sample(self):
         N = len(self.buffer)
@@ -133,14 +128,14 @@ class Agent():
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,
-                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps, parallel_env=worker)
+                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps, num_agents=2)
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
 
-    def step(self, state, action, reward, next_state, done):
+    def step(self, state, action, reward, next_state, done, crane_id):
         # Save experience in replay memory
-        self.memory.add(state, action, reward, next_state, done)
+        self.memory.add(state, action, reward, next_state, done, crane_id)
 
         # Learn every UPDATE_EVERY time steps.
         loss = None
