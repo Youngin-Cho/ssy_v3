@@ -45,11 +45,16 @@ class PrioritizedReplay(object):
     def beta_by_frame(self, frame_idx):
         return min(1.0, self.beta_start + frame_idx * (1.0 - self.beta_start) / self.beta_steps)
 
-    def add(self, state, action, reward, next_state, done, crane_id):
+    def add(self, state, action, reward, next_state, done, crane_id=None):
         # n_step calc
-        self.n_step_buffer[int(crane_id)].append((state, action, reward, next_state, done))
-        if len(self.n_step_buffer[crane_id]) == self.n_step:
-            state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[crane_id])
+        if crane_id is None:
+            self.n_step_buffer[0].append((state, action, reward, next_state, done))
+            if len(self.n_step_buffer[0]) == self.n_step:
+                state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[0])
+        else:
+            self.n_step_buffer[int(crane_id)].append((state, action, reward, next_state, done))
+            if len(self.n_step_buffer[crane_id]) == self.n_step:
+                state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[crane_id])
 
         max_prio = self.priorities.max() if self.buffer else 1.0  # gives max priority if buffer is not empty else 1
 
@@ -99,7 +104,7 @@ class PrioritizedReplay(object):
 class Agent():
     def __init__(self, state_size, action_size, meta_data, look_ahead,
                  capacity, alpha, beta_start, beta_steps,
-                 n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker):
+                 n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, num_agents):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -109,11 +114,8 @@ class Agent():
         self.alpha = 0.9
         self.gamma = gamma
 
-        self.batch_size = batch_size * worker
-        self.Q_updates = 0
+        self.batch_size = batch_size
         self.n_step = n_step
-        self.worker = worker
-        self.update_every = worker
         self.last_action = None
 
         # IQN-Network
@@ -128,23 +130,17 @@ class Agent():
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,
-                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps, num_agents=2)
+                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps, num_agents=num_agents)
 
-        # Initialize time step (for updating every UPDATE_EVERY steps)
-        self.t_step = 0
-
-    def step(self, state, action, reward, next_state, done, crane_id):
+    def step(self, state, action, reward, next_state, done, crane_id=None):
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state, done, crane_id)
 
-        # Learn every UPDATE_EVERY time steps.
         loss = None
-        self.t_step = (self.t_step + 1) % self.update_every
-        if self.t_step == 0:
-            # If enough samples are available in memory, get random subset and learn
-            if len(self.memory) >= self.batch_size:
-                experiences = self.memory.sample()
-                loss = self.learn(experiences)
+        # If enough samples are available in memory, get random subset and learn
+        if len(self.memory) >= self.batch_size:
+            experiences = self.memory.sample()
+            loss = self.learn(experiences)
 
         return loss
 
@@ -161,8 +157,6 @@ class Agent():
                 mask[i, possible_actions[i]] = 0.0
             const = 1.5 * (np.max(action_values) - np.min(action_values))
             action_values = action_values - const * mask
-            # temp = action_values - np.inf * mask
-            # action_values = np.where(np.isnan(temp), action_values, temp)
             action = np.argmax(action_values, axis=1)
         else:
             action = [random.choices(candidate)[0] for candidate in possible_actions]

@@ -89,18 +89,14 @@ if __name__ == "__main__":
                   n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
     # writer = SummaryWriter(log_dir)
 
-    # if cfg.load_model:
-    #     checkpoint_crane1 = torch.load(cfg.model_path)
-    #     start_episode = checkpoint['episode'] + 1
-    #     agent_crane1.qnetwork_local.load_state_dict(checkpoint['model1_state_dict'])
-    #     agent_crane1.qnetwork_target.load_state_dict(checkpoint['model1_state_dict'])
-    #     agent_crane1.optimizer.load_state_dict(checkpoint['optimizer1_state_dict'])
-    #     agent_crane2.qnetwork_local.load_state_dict(checkpoint['model2_state_dict'])
-    #     agent_crane2.qnetwork_target.load_state_dict(checkpoint['model2_state_dict'])
-    #     agent_crane2.optimizer.load_state_dict(checkpoint['optimizer2_state_dict'])
-    # else:
-    #     start_episode = 1
-    start_episode = 1
+    if cfg.load_model:
+        checkpoint = torch.load(cfg.model_path)
+        start_episode = checkpoint['episode'] + 1
+        agent.qnetwork_local.load_state_dict(checkpoint['model_state_dict'])
+        agent.qnetwork_target.load_state_dict(checkpoint['model_state_dict'])
+        agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    else:
+        start_episode = 1
 
     with open(log_dir + "train_log.csv", 'w') as f:
         f.write('episode, reward, loss\n')
@@ -111,8 +107,8 @@ if __name__ == "__main__":
         reward_tot = 0.0
         done = False
 
-        sample_crane1 = []
-        sample_crane2 = []
+        # sample_crane1 = []
+        # sample_crane2 = []
 
         loss_list = []
         state, info = env.reset()
@@ -123,23 +119,23 @@ if __name__ == "__main__":
             action = agent.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=crane_in_decision)
             next_state, reward, done, info = env.step(action[0])
 
-            if info["crane_id"] == 0:
-                if len(sample_crane1) == 0:
-                    sample_crane1.append(state)
-                    loss = None
-                else:
-                    sample_crane1 = sample_crane1 + [action[0], reward, next_state, done, crane_in_decision]
-                    loss = agent.step(*sample_crane1)
-                    sample_crane1 = [next_state]
-            else:
-                if len(sample_crane2) == 0:
-                    sample_crane2.append(state)
-                    loss = None
-                else:
-                    sample_crane2 = sample_crane2 + [action[0], reward, next_state, done, crane_in_decision]
-                    loss = agent.step(*sample_crane2)
-                    sample_crane2 = [next_state]
-
+            # if info["crane_id"] == 0:
+            #     if len(sample_crane1) == 0:
+            #         sample_crane1.append(state)
+            #         loss = None
+            #     else:
+            #         sample_crane1 = sample_crane1 + [action[0], reward, next_state, done, crane_in_decision]
+            #         loss = agent.step(*sample_crane1)
+            #         sample_crane1 = [next_state]
+            # else:
+            #     if len(sample_crane2) == 0:
+            #         sample_crane2.append(state)
+            #         loss = None
+            #     else:
+            #         sample_crane2 = sample_crane2 + [action[0], reward, next_state, done, crane_in_decision]
+            #         loss = agent.step(*sample_crane2)
+            #         sample_crane2 = [next_state]
+            loss = agent.step(state, action[0], reward, next_state, done)
             if loss is not None:
                 loss_list.append(loss)
 
