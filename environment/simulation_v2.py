@@ -265,10 +265,14 @@ class Management:
 
             self.reward_info[crane.name]["Wasting Time"] \
                 = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
-            self.reward_info[crane.opposite.name]["Wasting Time"] \
-                = crane.opposite.wasting_time - self.reward_info[crane.opposite.name]["Wasting Time Cumulative"]
             self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
-            self.reward_info[crane.opposite.name]["Wasting Time Cumulative"] = crane.opposite.wasting_time
+
+            # self.reward_info[crane.name]["Wasting Time"] \
+            #     = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
+            # self.reward_info[crane.opposite.name]["Wasting Time"] \
+            #     = crane.opposite.wasting_time - self.reward_info[crane.opposite.name]["Wasting Time Cumulative"]
+            # self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
+            # self.reward_info[crane.opposite.name]["Wasting Time Cumulative"] = crane.opposite.wasting_time
 
             # 행동 선택을 위한 이벤트 생성
             self.decision_time = True
