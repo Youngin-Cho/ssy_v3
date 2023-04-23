@@ -62,10 +62,13 @@ if __name__ == "__main__":
     beta_steps = cfg.beta_steps
     batch_size = cfg.batch_size
     N = cfg.N
-    base_lr = cfg.base_lr
-    max_lr = cfg.max_lr
-    step_size_up = cfg.step_size_up
-    step_size_down = cfg.step_size_down
+    lr = cfg.lr
+    lr_step = cfg.lr_step
+    lr_decay = cfg.lr_decay
+    # base_lr = cfg.base_lr
+    # max_lr = cfg.max_lr
+    # step_size_up = cfg.step_size_up
+    # step_size_down = cfg.step_size_down
     gamma = cfg.gamma
     tau = cfg.tau
     worker = cfg.worker
@@ -86,7 +89,7 @@ if __name__ == "__main__":
 
     agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
                   capacity, alpha, beta_start, beta_steps,
-                  n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                  n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, worker)
     # writer = SummaryWriter(log_dir)
 
     if cfg.load_model:

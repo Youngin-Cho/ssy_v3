@@ -104,7 +104,7 @@ class PrioritizedReplay(object):
 class Agent():
     def __init__(self, state_size, action_size, meta_data, look_ahead,
                  capacity, alpha, beta_start, beta_steps,
-                 n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, num_agents):
+                 n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N, num_agents):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -123,10 +123,10 @@ class Agent():
         self.qnetwork_target = Network(state_size, action_size, meta_data, look_ahead, N).to(device)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
-        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=base_lr)
-        # self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
-        self.scheduler = CyclicLR(optimizer=self.optimizer, base_lr=base_lr, max_lr=max_lr,
-                                  step_size_up=step_size_up, step_size_down=step_size_down, mode="triangular2", cycle_momentum=False)
+        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)
+        self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
+        # self.scheduler = CyclicLR(optimizer=self.optimizer, base_lr=base_lr, max_lr=max_lr,
+        #                           step_size_up=step_size_up, step_size_down=step_size_down, mode="triangular2", cycle_momentum=False)
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,
