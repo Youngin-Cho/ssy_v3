@@ -123,11 +123,9 @@ if __name__ == "__main__":
             next_state, reward, done, info = env.step(action[0])
 
             if crane_in_decision == 0:
-                sample_crane1.append(state)
-                sample_crane1.append(action[0])
+                sample_crane1 = [state, action[0]]
             else:
-                sample_crane2.append(state)
-                sample_crane2.append(action[0])
+                sample_crane2 = [state, action[0]]
 
             if info["crane_id"] == 0:
                 if len(sample_crane1) != 0:
