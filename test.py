@@ -10,7 +10,7 @@ from environment.env import *
 
 
 if __name__ == "__main__":
-    algorithm = "SD" #["RL", "SD", "LD", "Random"]
+    algorithm = "LD" #["RL", "SD", "LD", "Random"]
 
     test_dir = "./input/validation/10-10-20-4/"
     test_path = os.listdir(test_dir)
@@ -49,8 +49,12 @@ if __name__ == "__main__":
             possible_actions = env.get_possible_actions()
             if algorithm == "RL":
                 action = agent.get_action([state], [possible_actions], eps=0.0, noisy=False, crane_id=env.crane_in_decision)
-            else:
+            elif algorithm == "SD":
                 action = agent(state, possible_actions, crane_id=crane_in_decision)
+            elif algorithm == "LD":
+                action = agent(state, possible_actions, crane_id=crane_in_decision)
+            else:
+                action = agent(possible_actions)
             next_state, reward, done, info = env.step(action)
             state = next_state
             crane_in_decision = info["crane_id"]

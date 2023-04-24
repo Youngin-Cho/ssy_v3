@@ -150,10 +150,12 @@ class SteelStockYard(object):
         # reward = 1 / wasting_time if wasting_time != 0 else 1
 
         if self.crane_in_decision == 0:
-            reward = - self.model.reward_info["Crane-1"]["Wasting Time"] / 87
+            # reward = - self.model.reward_info["Crane-1"]["Wasting Time"] / 87
+            reward = self.model.reward_info["Crane-1"]["Wasting Time"]
         else:
-            reward = - self.model.reward_info["Crane-2"]["Wasting Time"] / 87
-        # reward = 1 / reward if reward != 0 else 1
+            # reward = - self.model.reward_info["Crane-2"]["Wasting Time"] / 87:
+            reward = self.model.reward_info["Crane-2"]["Wasting Time"]
+        reward = 10 / reward if reward != 0 else 10
 
         return reward
 
