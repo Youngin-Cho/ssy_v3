@@ -184,8 +184,10 @@ class Management:
         self.last_action = None
         self.state_info = {crane.name: {"Current Coord": crane.current_coord,
                                         "Target Coord": (-1.0, -1.0)} for crane in self.cranes.items}
-        self.reward_info = {crane.name: {"Wasting Time": 0.0,
-                                         "Wasting Time Cumulative": 0.0} for crane in self.cranes.items}
+        self.reward_info = {crane.name: {"Wasting Time_Crane-1": 0.0,
+                                         "Wasting Time_Crane-2": 0.0,
+                                         "Wasting Time Cumulative_Crane-1": 0.0,
+                                         "Wasting Time Cumulative_Crane-2": 0.0} for crane in self.cranes.items}
 
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()} # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
