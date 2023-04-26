@@ -263,9 +263,12 @@ class Management:
             self.state_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
             self.state_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
 
-            self.reward_info[crane.name]["Wasting Time"] \
-                = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
-            self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
+            self.reward_info[crane.name]["Wasting Time_%s" % crane.name] \
+                = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name]
+            self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name] = crane.wasting_time
+            self.reward_info[crane.name]["Wasting Time_%s" % crane.opposite.name] \
+                = crane.opposite.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name]
+            self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name] = crane.opposite.wasting_time
 
             # self.reward_info[crane.name]["Wasting Time"] \
             #     = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
