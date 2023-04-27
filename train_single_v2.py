@@ -1,13 +1,13 @@
 import os
 import vessl
+import torch
 import numpy as np
 import pandas as pd
 
 from cfg_single import get_cfg
 from torch.utils.tensorboard import SummaryWriter
-from agent.iqn import *
-from environment.env import *
-from environment.multi_process import *
+from agent.iqn import Agent
+from environment.env_v2 import SteelStockYard
 
 
 def evaluate(validation_dir):
@@ -43,7 +43,7 @@ def evaluate(validation_dir):
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    vessl.init(organization="snu-eng-dgx", project="S", hp=cfg)
+    vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
