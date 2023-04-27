@@ -34,7 +34,7 @@ class SteelStockYard(object):
         self.state_size = {"crane": 2 * len(bays) * 44, "pile": len(bays) * 44, "plate": len(bays) * 44}
         self.meta_data = (["crane", "plate"],
                           [("crane", "interfering", "crane"),
-                           ("crane", "moving", "plate"),
+                           ("plate", "moving", "crane"),
                            ("plate", "stacking", "plate")])
 
         if (df_storage is None) and (df_reshuffle is None) and (df_retrieval is None):
