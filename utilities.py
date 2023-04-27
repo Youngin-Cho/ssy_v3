@@ -17,6 +17,12 @@ def get_coord(pile_name):
     return [x, y]
 
 
+def get_location_id(pile_name):
+    x, y = get_coord(pile_name)
+    id = int((x - 1) + 44 * (y - 1))
+    return id
+
+
 def get_moving_time(from_location, to_location):
     if type(from_location).__name__ == "Conveyor" or type(to_location).__name__ == "Conveyor":
         x_time = 2 * abs(to_location.coord[0] - from_location[0])

@@ -194,7 +194,7 @@ class SteelStockYard(object):
             crane_target_y = info["Target Coord"][1]
             features = np.maximum(2 * np.abs(all_x_coords - crane_current_x), np.abs(all_y_coords - crane_current_y))
             node_features_for_crane[i, :len(all_x_coords)] = features / 86
-            if crane_target_x == -1 and crane_target_y == -1:
+            if not (crane_target_x == -1 and crane_target_y == -1):
                 features = np.maximum(2 * np.abs(all_x_coords - crane_target_x), np.abs(all_y_coords - crane_target_y))
                 node_features_for_crane[i, len(all_x_coords):] = features / 86
 

@@ -189,7 +189,7 @@ class Management:
                                          "Wasting Time Cumulative_Crane-1": 0.0,
                                          "Wasting Time Cumulative_Crane-2": 0.0} for crane in self.cranes.items}
 
-        self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()} # coord를 통해 pile 호출
+        self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()}  # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
             self.location_mapping[tuple(conveyor.coord + [1])] = conveyor
             self.location_mapping[tuple(conveyor.coord + [2])] = conveyor
