@@ -184,10 +184,13 @@ class Management:
         self.last_action = None
         self.state_info = {crane.name: {"Current Coord": crane.current_coord,
                                         "Target Coord": (-1.0, -1.0)} for crane in self.cranes.items}
-        self.reward_info = {crane.name: {"Wasting Time_Crane-1": 0.0,
-                                         "Wasting Time_Crane-2": 0.0,
-                                         "Wasting Time Cumulative_Crane-1": 0.0,
-                                         "Wasting Time Cumulative_Crane-2": 0.0} for crane in self.cranes.items}
+        self.reward_info = {crane.name: {"Wasting Time": 0.0,
+                                         "Wasting Time Cumulative": 0.0} for crane in self.cranes.items}
+
+        # self.reward_info = {crane.name: {"Wasting Time_Crane-1": 0.0,
+        #                                  "Wasting Time_Crane-2": 0.0,
+        #                                  "Wasting Time Cumulative_Crane-1": 0.0,
+        #                                  "Wasting Time Cumulative_Crane-2": 0.0} for crane in self.cranes.items}
 
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()}  # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
@@ -265,19 +268,19 @@ class Management:
             self.state_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
             self.state_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
 
-            self.reward_info[crane.name]["Wasting Time_%s" % crane.name] \
-                = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name]
-            self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name] = crane.wasting_time
-            self.reward_info[crane.name]["Wasting Time_%s" % crane.opposite.name] \
-                = crane.opposite.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name]
-            self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name] = crane.opposite.wasting_time
+            # self.reward_info[crane.name]["Wasting Time_%s" % crane.name] \
+            #     = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name]
+            # self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name] = crane.wasting_time
+            # self.reward_info[crane.name]["Wasting Time_%s" % crane.opposite.name] \
+            #     = crane.opposite.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name]
+            # self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name] = crane.opposite.wasting_time
 
-            # self.reward_info[crane.name]["Wasting Time"] \
-            #     = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
-            # self.reward_info[crane.opposite.name]["Wasting Time"] \
-            #     = crane.opposite.wasting_time - self.reward_info[crane.opposite.name]["Wasting Time Cumulative"]
-            # self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
-            # self.reward_info[crane.opposite.name]["Wasting Time Cumulative"] = crane.opposite.wasting_time
+            self.reward_info[crane.name]["Wasting Time"] \
+                = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
+            self.reward_info[crane.opposite.name]["Wasting Time"] \
+                = crane.opposite.wasting_time - self.reward_info[crane.opposite.name]["Wasting Time Cumulative"]
+            self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
+            self.reward_info[crane.opposite.name]["Wasting Time Cumulative"] = crane.opposite.wasting_time
 
             # 행동 선택을 위한 이벤트 생성
             self.decision_time = True

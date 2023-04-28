@@ -55,6 +55,7 @@ class SteelStockYard(object):
         self.action_mapping = {i + 1: pile_name for i, pile_name in enumerate(self.model.piles.keys())}
         self.action_mapping_inverse = {y: x for x, y in self.action_mapping.items()}
         self.crane_in_decision = None
+        self.time = 0.0
         self.safety_margin = safety_margin
 
     def step(self, action):
@@ -82,6 +83,7 @@ class SteelStockYard(object):
 
         self.crane_in_decision = self.model.crane_in_decision
         info = {"crane_id": self.crane_in_decision}
+        self.time = self.model.env.now
 
         return next_state, reward, done, info
 
@@ -143,14 +145,22 @@ class SteelStockYard(object):
         return log
 
     def _calculate_reward(self):
-        if self.crane_in_decision == 0:
-            wasting_time_crane1 = self.model.reward_info["Crane-1"]["Wasting Time_Crane-1"] / 87
-            wasting_time_crane2 = self.model.reward_info["Crane-1"]["Wasting Time_Crane-2"] / 87
-            reward = - (0.8 * wasting_time_crane1 + 0.2 * wasting_time_crane2)
+        wasting_time = 0
+        for crane_name in self.model.reward_info.keys():
+            wasting_time += self.model.reward_info[crane_name]["Wasting Time"]
+        if self.model.env.now != self.time:
+            reward = - wasting_time / 2 * (self.model.env.now - self.time)
         else:
-            wasting_time_crane1 = self.model.reward_info["Crane-2"]["Wasting Time_Crane-1"] / 87
-            wasting_time_crane2 = self.model.reward_info["Crane-2"]["Wasting Time_Crane-2"] / 87
-            reward = - (0.2 * wasting_time_crane1 + 0.8 * wasting_time_crane2)
+            reward = 0
+
+        # if self.crane_in_decision == 0:
+        #     wasting_time_crane1 = self.model.reward_info["Crane-1"]["Wasting Time_Crane-1"] / 87
+        #     wasting_time_crane2 = self.model.reward_info["Crane-1"]["Wasting Time_Crane-2"] / 87
+        #     reward = - (0.8 * wasting_time_crane1 + 0.2 * wasting_time_crane2)
+        # else:
+        #     wasting_time_crane1 = self.model.reward_info["Crane-2"]["Wasting Time_Crane-1"] / 87
+        #     wasting_time_crane2 = self.model.reward_info["Crane-2"]["Wasting Time_Crane-2"] / 87
+        #     reward = - (0.2 * wasting_time_crane1 + 0.8 * wasting_time_crane2)
 
         return reward
 
