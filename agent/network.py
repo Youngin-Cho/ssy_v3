@@ -61,14 +61,14 @@ class Network(nn.Module):
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(1, self.n_cos + 1)]).view(1, 1, self.n_cos).to(device)
 
-        self.conv1 = HGTConv(self.state_size, 512, meta_data, head=4)
-        self.conv2 = HGTConv(512, 512, meta_data, head=4)
+        self.conv1 = HGTConv(self.state_size, 128, meta_data, head=4)
+        self.conv2 = HGTConv(128, 128, meta_data, head=4)
         # self.conv3 = HGTConv(512, 512, meta_data, head=4)
-        self.cos_embedding = nn.Linear(self.n_cos, 512)
-        self.ff_1 = NoisyLinear(512, 512)
-        self.ff_2 = NoisyLinear(512, 512)
-        self.advantage = NoisyLinear(512, action_size)
-        self.value = NoisyLinear(512, 1)
+        self.cos_embedding = nn.Linear(self.n_cos, 128)
+        self.ff_1 = NoisyLinear(128, 128)
+        self.ff_2 = NoisyLinear(128, 128)
+        self.advantage = NoisyLinear(128, action_size)
+        self.value = NoisyLinear(128, 1)
         # self.ff_2 = NoisyLinear(512, action_size)
 
     def calc_cos(self, batch_size, n_tau=8):
@@ -103,10 +103,10 @@ class Network(nn.Module):
 
         cos, taus = self.calc_cos(batch_size, num_tau)  # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)
-        cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, 512)  # (batch, n_tau, layer)
+        cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, 128)  # (batch, n_tau, layer)
 
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
-        x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 512)
+        x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 128)
 
         x = torch.selu(self.ff_1(x, noisy=noisy))
         x = torch.selu(self.ff_2(x, noisy=noisy))
