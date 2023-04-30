@@ -146,10 +146,17 @@ class SteelStockYard(object):
         return log
 
     def _calculate_reward(self):
-        wasting_time = 0
+        empty_travel_time = 0.0
+        avoiding_time = 0.0
         for crane_name in self.model.reward_info.keys():
-            wasting_time += self.model.reward_info[crane_name]["Wasting Time"]
-        reward = 1 / wasting_time if wasting_time != 0 else 1
+            empty_travel_time += self.model.reward_info[crane_name]["Empty Travel Time"]
+            avoiding_time += self.model.reward_info[crane_name]["Avoiding Time"]
+        reward_1 = 1 / empty_travel_time if empty_travel_time != 0.0 else 1
+        if self.model.env.now != self.time:
+            reward_2 = - avoiding_time / (2 * (self.model.env.now - self.time))
+        else:
+            reward_2 = 0
+        reward = reward_1 + reward_2
         # if self.model.env.now != self.time:
         #     reward = - wasting_time / (2 * (self.model.env.now - self.time))
         # else:

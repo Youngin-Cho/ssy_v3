@@ -60,7 +60,9 @@ class Crane:
         self.x_velocity = 0.5
         self.y_velocity = 1.0
         self.update_time = 0.0
-        self.wasting_time = 0.0
+        self.waiting_time = 0.0
+        self.empty_travel_time = 0.0
+        self.avoiding_time = 0.0
 
     def get_plate(self, pile):
         plate = pile.plates.pop()
@@ -184,8 +186,12 @@ class Management:
         self.last_action = None
         self.state_info = {crane.name: {"Current Coord": crane.current_coord,
                                         "Target Coord": (-1.0, -1.0)} for crane in self.cranes.items}
-        self.reward_info = {crane.name: {"Wasting Time": 0.0,
-                                         "Wasting Time Cumulative": 0.0} for crane in self.cranes.items}
+        self.reward_info = {crane.name: {"Empty Travel Time": 0.0,
+                                         "Avoiding Time": 0.0,
+                                         "Waiting Time": 0.0,
+                                         "Empty Travel Time Cumulative": 0.0,
+                                         "Avoiding Time Cumulative": 0.0,
+                                         "Waiting Time Cumulative": 0.0} for crane in self.cranes.items}
 
         # self.reward_info = {crane.name: {"Wasting Time_Crane-1": 0.0,
         #                                  "Wasting Time_Crane-2": 0.0,
@@ -275,12 +281,26 @@ class Management:
             #     = crane.opposite.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name]
             # self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name] = crane.opposite.wasting_time
 
-            self.reward_info[crane.name]["Wasting Time"] \
-                = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative"]
-            self.reward_info[crane.opposite.name]["Wasting Time"] \
-                = crane.opposite.wasting_time - self.reward_info[crane.opposite.name]["Wasting Time Cumulative"]
-            self.reward_info[crane.name]["Wasting Time Cumulative"] = crane.wasting_time
-            self.reward_info[crane.opposite.name]["Wasting Time Cumulative"] = crane.opposite.wasting_time
+            self.reward_info[crane.name]["Waiting Time"] \
+                = crane.waiting_time - self.reward_info[crane.name]["Waiting Time Cumulative"]
+            self.reward_info[crane.opposite.name]["Waiting Time"] \
+                = crane.opposite.waiting_time - self.reward_info[crane.opposite.name]["Waiting Time Cumulative"]
+            self.reward_info[crane.name]["Waiting Time Cumulative"] = crane.waiting_time
+            self.reward_info[crane.opposite.name]["Waiting Time Cumulative"] = crane.opposite.waiting_time
+
+            self.reward_info[crane.name]["Empty Travel Time"] \
+                = crane.empty_travel_time - self.reward_info[crane.name]["Empty Travel Time Cumulative"]
+            self.reward_info[crane.opposite.name]["Empty Travel Time"] \
+                = crane.opposite.empty_travel_time - self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"]
+            self.reward_info[crane.name]["Empty Travel Time Cumulative"] = crane.empty_travel_time
+            self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"] = crane.opposite.empty_travel_time
+
+            self.reward_info[crane.name]["Avoiding Time"] \
+                = crane.avoiding_time - self.reward_info[crane.name]["Avoiding Time Cumulative"]
+            self.reward_info[crane.opposite.name]["Avoiding Time"] \
+                = crane.opposite.avoiding_time - self.reward_info[crane.opposite.name]["Avoiding Time Cumulative"]
+            self.reward_info[crane.name]["Avoiding Time Cumulative"] = crane.avoiding_time
+            self.reward_info[crane.opposite.name]["Avoiding Time Cumulative"] = crane.opposite.avoiding_time
 
             # 행동 선택을 위한 이벤트 생성
             self.decision_time = True
@@ -311,7 +331,7 @@ class Management:
             waiting_finish = self.env.now
             self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name)
-            # crane.wasting_time += waiting_finish - waiting_start
+            crane.waiting_time += waiting_finish - waiting_start
         else:
             crane.idle = False
             from_pile = self.piles[action]
@@ -365,25 +385,31 @@ class Management:
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             crane.safety_xcoord = -1.0
-
-            if len(crane.plates) == 0:
-                crane.wasting_time += moving_time
+            
+            if opposite_direction:
+                crane.avoiding_time += moving_time
+                added_moving_time = moving_time
             else:
-                if opposite_direction:
-                    crane.wasting_time += moving_time
+                if len(crane.plates) == 0:
+                    crane.empty_travel_time += moving_time
 
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             if moving_time_opposite_crane > moving_time_crane:
                 yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
-                crane.wasting_time += moving_time_opposite_crane - moving_time_crane
+                crane.avoiding_time += moving_time_opposite_crane - moving_time_crane
             moving_time = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
                                               to_ycoord=crane.target_coord[1]))
             self.monitor.record(self.env.now, "Move_to", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
 
-            if len(crane.plates) == 0:
-                crane.wasting_time += moving_time
+            if opposite_direction:
+                crane.avoiding_time += added_moving_time
+                if len(crane.plates) == 0:
+                    crane.empty_travel_time += (moving_time - added_moving_time)
+            else:
+                if len(crane.plates) == 0:
+                    crane.empty_travel_time += moving_time
 
         else:
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
@@ -394,7 +420,7 @@ class Management:
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
 
             if len(crane.plates) == 0:
-                crane.wasting_time += moving_time
+                crane.empty_travel_time += moving_time
 
     def check_interference(self, crane):
         if crane.opposite.idle:
