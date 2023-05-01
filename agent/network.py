@@ -61,15 +61,13 @@ class Network(nn.Module):
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(1, self.n_cos + 1)]).view(1, 1, self.n_cos).to(device)
 
-        self.conv1 = HGTConv(self.state_size, 128, meta_data, head=4)
-        self.conv2 = HGTConv(128, 128, meta_data, head=4)
-        # self.conv3 = HGTConv(512, 512, meta_data, head=4)
-        self.cos_embedding = nn.Linear(self.n_cos, 128)
-        self.ff_1 = NoisyLinear(128, 128)
-        self.ff_2 = NoisyLinear(128, 128)
-        self.advantage = NoisyLinear(128, action_size)
-        self.value = NoisyLinear(128, 1)
-        # self.ff_2 = NoisyLinear(512, action_size)
+        self.conv1 = HGTConv(self.state_size, 512, meta_data, head=4)
+        self.conv2 = HGTConv(512, 512, meta_data, head=4)
+        self.cos_embedding = nn.Linear(self.n_cos, 512)
+        self.ff_1 = NoisyLinear(512, 512)
+        self.ff_2 = NoisyLinear(512, 512)
+        self.advantage = NoisyLinear(512, action_size)
+        self.value = NoisyLinear(512, 1)
 
     def calc_cos(self, batch_size, n_tau=8):
         """
@@ -89,24 +87,22 @@ class Network(nn.Module):
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
         x_dict = self.conv2(x_dict, edge_index_dict)
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
-        # x_dict = self.conv3(x_dict, edge_index_dict)
-        # x_dict = {key: F.selu(x) for key, x in x_dict.items()}
 
         batch_idx = torch.arange(batch_size).to(device)
         batch_idx_plate = batch_idx.repeat_interleave(int(x_dict["plate"].size(0) / batch_size))
-        batch_idx_crane = batch_idx.repeat_interleave(int(x_dict["crane"].size(0) / batch_size))
-        x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["plate"], batch_idx_plate)
-        # num_crane = int(x_dict["crane"].size(0) / batch_size)
-        # x = x_dict["crane"][int(crane_id)::num_crane, :] + global_add_pool(x_dict["plate"], batch_idx_plate)
+        # batch_idx_crane = batch_idx.repeat_interleave(int(x_dict["crane"].size(0) / batch_size))
+        # x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["plate"], batch_idx_plate)
+        num_crane = int(x_dict["crane"].size(0) / batch_size)
+        x = x_dict["crane"][int(crane_id)::num_crane, :] + global_add_pool(x_dict["plate"], batch_idx_plate)
         # x = torch.cat((x_dict["crane"][int(crane_id - 1)::num_crane, :], global_add_pool(x_dict["pile"], batch_idx)), dim=1)
         # x = x_dict["crane"][int(crane_id - 1)::num_crane, :]
 
         cos, taus = self.calc_cos(batch_size, num_tau)  # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)
-        cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, 128)  # (batch, n_tau, layer)
+        cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, num_tau, 512)  # (batch, n_tau, layer)
 
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
-        x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 128)
+        x = (x.unsqueeze(1) * cos_x).view(batch_size * num_tau, 512)
 
         x = torch.selu(self.ff_1(x, noisy=noisy))
         x = torch.selu(self.ff_2(x, noisy=noisy))
