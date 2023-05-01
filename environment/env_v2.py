@@ -172,44 +172,36 @@ class SteelStockYard(object):
         state = HeteroData()
 
         num_of_node_for_crane = self.num_of_cranes
-        num_of_node_for_plate = self.look_ahead * len(self.pile_list)
-        num_of_edge_for_plate_plate = (self.look_ahead - 1) * len(self.pile_list)
+        num_of_node_for_plate = len(self.pile_list)
+        num_of_edge_for_plate_plate = len(self.pile_list) * (len(self.pile_list) - 1)
         num_of_edge_for_crane_plate = len(self.pile_list) * self.num_of_cranes
         num_of_edge_for_plate_crane = len(self.pile_list) * self.num_of_cranes
-        num_of_edge_for_crane_crane = (len(self.crane_list) - 1) * len(self.crane_list)
+        num_of_edge_for_crane_crane = len(self.crane_list) * (len(self.crane_list) - 1)
 
         node_features_for_plate = np.zeros((num_of_node_for_plate, self.state_size["plate"]))
         node_features_for_crane = np.zeros((num_of_node_for_crane, self.state_size["crane"]))
 
         all_x_coords = np.array([i for i in range(1, 45)] * len(self.bays))
-        all_y_coords = np.array([1 for _ in range(1, 45)] + [2 for _ in range(1, 45)])
+        # all_y_coords = np.array([1 for _ in range(1, 45)] + [2 for _ in range(1, 45)])
 
         for i, crane_name in enumerate(self.crane_list):
             info = self.model.state_info[crane_name]
             crane_current_x = info["Current Coord"][0]
-            crane_current_y = info["Current Coord"][1]
             crane_target_x = info["Target Coord"][0]
-            crane_target_y = info["Target Coord"][1]
-            features_from = np.maximum(2 * np.abs(all_x_coords - crane_current_x), np.abs(all_y_coords - crane_current_y))
-            node_features_for_crane[i, :len(all_x_coords)] = features_from / 86
-            if not (crane_target_x == -1 and crane_target_y == -1):
-                features_to = np.maximum(2 * np.abs(all_x_coords - crane_target_x), np.abs(all_y_coords - crane_target_y))
-                node_features_for_crane[i, len(all_x_coords):] = features_to / 86
+
+            node_features_for_crane[i, :len(all_x_coords)] = np.abs(all_x_coords - crane_current_x) / 44
+            if not crane_target_x == -1:
+                node_features_for_crane[i, len(all_x_coords):] = np.abs(all_x_coords - crane_target_x) / 44
 
         for i, from_pile_name in enumerate(self.pile_list):
             from_pile_x = self.model.piles[from_pile_name].coord[0]
-            from_pile_y = self.model.piles[from_pile_name].coord[1]
-            features_from = np.maximum(2 * np.abs(all_x_coords - from_pile_x), np.abs(all_y_coords - from_pile_y))
+            node_features_for_plate[i, :len(all_x_coords)] = np.abs(all_x_coords - from_pile_x) / 44
 
             plates = self.model.piles[from_pile_name].plates
-            for j in range(self.look_ahead):
-                if len(plates) >= j + 1:
-                    to_pile_name = self.model.piles[from_pile_name].plates[-1 - j].to_pile
-                    to_pile_x = self.model.piles[to_pile_name].coord[0]
-                    to_pile_y = self.model.piles[to_pile_name].coord[1]
-                    features_to = np.maximum(2 * np.abs(all_x_coords - to_pile_x), np.abs(all_y_coords - to_pile_y))
-                    node_features_for_plate[self.look_ahead * i + j, :len(all_x_coords)] = features_from / 86
-                    node_features_for_plate[self.look_ahead * i + j, len(all_x_coords):] = features_to / 86
+            if len(plates) >= 1:
+                to_pile_name = self.model.piles[from_pile_name].plates[-1].to_pile
+                to_pile_x = self.model.piles[to_pile_name].coord[0]
+                node_features_for_plate[i, len(all_x_coords):] = np.abs(all_x_coords - to_pile_x) / 44
 
         state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32)
         state['plate'].x = torch.tensor(node_features_for_plate, dtype=torch.float32)
@@ -219,19 +211,16 @@ class SteelStockYard(object):
         edge_plate_crane = np.zeros((2, num_of_edge_for_plate_crane))
         edge_crane_crane = np.zeros((2, num_of_edge_for_crane_crane))
 
-        for i in range(self.look_ahead - 1):
-            edge_plate_plate[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] \
-                = range(i, self.look_ahead * len(self.pile_list), self.look_ahead)
-            edge_plate_plate[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] \
-                = range(i + 1, self.look_ahead * len(self.pile_list), self.look_ahead)
+        for i, from_pile_name in enumerate(self.pile_list):
+            edge_plate_plate[0, i * (len(self.pile_list) - 1):(i + 1) * (len(self.pile_list) - 1)] = i
+            edge_plate_plate[1, i * (len(self.pile_list) - 1):(i + 1) * (len(self.pile_list) - 1)] \
+                = [j for j in range(len(self.pile_list)) if j != i]
 
         for i, crane_name in enumerate(self.crane_list):
             edge_crane_plate[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
-            edge_crane_plate[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] \
-                = range(0, self.look_ahead * len(self.pile_list), self.look_ahead)
+            edge_crane_plate[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
 
-            edge_plate_crane[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] \
-                = range(0, self.look_ahead * len(self.pile_list), self.look_ahead)
+            edge_plate_crane[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
             edge_plate_crane[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
 
             edge_crane_crane[0, i * (len(self.crane_list) - 1):(i + 1) * (len(self.crane_list) - 1)] = i
