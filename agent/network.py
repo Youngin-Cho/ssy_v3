@@ -90,10 +90,10 @@ class Network(nn.Module):
 
         batch_idx = torch.arange(batch_size).to(device)
         batch_idx_plate = batch_idx.repeat_interleave(int(x_dict["plate"].size(0) / batch_size))
-        # batch_idx_crane = batch_idx.repeat_interleave(int(x_dict["crane"].size(0) / batch_size))
-        # x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["plate"], batch_idx_plate)
-        num_crane = int(x_dict["crane"].size(0) / batch_size)
-        x = x_dict["crane"][int(crane_id)::num_crane, :] + global_add_pool(x_dict["plate"], batch_idx_plate)
+        batch_idx_crane = batch_idx.repeat_interleave(int(x_dict["crane"].size(0) / batch_size))
+        x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["plate"], batch_idx_plate)
+        # num_crane = int(x_dict["crane"].size(0) / batch_size)
+        # x = x_dict["crane"][int(crane_id)::num_crane, :] + global_add_pool(x_dict["plate"], batch_idx_plate)
         # x = torch.cat((x_dict["crane"][int(crane_id - 1)::num_crane, :], global_add_pool(x_dict["pile"], batch_idx)), dim=1)
         # x = x_dict["crane"][int(crane_id - 1)::num_crane, :]
 
