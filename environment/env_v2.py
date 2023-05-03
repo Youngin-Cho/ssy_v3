@@ -31,7 +31,7 @@ class SteelStockYard(object):
         self.num_of_retrieval_from_piles = num_of_retrieval_from_piles
 
         self.action_size = 2 * 40 + 2 + 1
-        self.state_size = {"crane": 2 * len(bays) * 44, "plate": 2 * len(bays) * 44}
+        self.state_size = {"crane": 2, "plate": 2}
         self.meta_data = (["crane", "plate"],
                           [("crane", "interfering", "crane"),
                            ("plate", "moving_rev", "crane"),
@@ -181,27 +181,24 @@ class SteelStockYard(object):
         node_features_for_plate = np.zeros((num_of_node_for_plate, self.state_size["plate"]))
         node_features_for_crane = np.zeros((num_of_node_for_crane, self.state_size["crane"]))
 
-        all_x_coords = np.array([i for i in range(1, 45)] * len(self.bays))
-        # all_y_coords = np.array([1 for _ in range(1, 45)] + [2 for _ in range(1, 45)])
-
         for i, crane_name in enumerate(self.crane_list):
             info = self.model.state_info[crane_name]
             crane_current_x = info["Current Coord"][0]
             crane_target_x = info["Target Coord"][0]
 
-            node_features_for_crane[i, :len(all_x_coords)] = np.abs(all_x_coords - crane_current_x) / 44
+            node_features_for_crane[i, 0] = crane_current_x / 44
             if not crane_target_x == -1:
-                node_features_for_crane[i, len(all_x_coords):] = np.abs(all_x_coords - crane_target_x) / 44
+                node_features_for_crane[i, 1] = crane_target_x / 44
 
         for i, from_pile_name in enumerate(self.pile_list):
             from_pile_x = self.model.piles[from_pile_name].coord[0]
-            node_features_for_plate[i, :len(all_x_coords)] = np.abs(all_x_coords - from_pile_x) / 44
+            node_features_for_plate[i, 0] = from_pile_x / 44
 
             plates = self.model.piles[from_pile_name].plates
             if len(plates) >= 1:
                 to_pile_name = self.model.piles[from_pile_name].plates[-1].to_pile
                 to_pile_x = self.model.piles[to_pile_name].coord[0]
-                node_features_for_plate[i, len(all_x_coords):] = np.abs(all_x_coords - to_pile_x) / 44
+                node_features_for_plate[i, 1] = to_pile_x / 44
 
         state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32)
         state['plate'].x = torch.tensor(node_features_for_plate, dtype=torch.float32)
