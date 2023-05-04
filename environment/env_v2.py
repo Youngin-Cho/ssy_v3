@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 
-from torch_geometric.data import HeteroData
+from torch_geometric.data import HeteroData, Data
 from environment.data import generate_data
 from environment.simulation_v2 import Management
 from utilities import get_location_id
@@ -157,18 +157,71 @@ class SteelStockYard(object):
         else:
             reward = 0
 
-        # if self.crane_in_decision == 0:
-        #     wasting_time_crane1 = self.model.reward_info["Crane-1"]["Wasting Time_Crane-1"] / 87
-        #     wasting_time_crane2 = self.model.reward_info["Crane-1"]["Wasting Time_Crane-2"] / 87
-        #     reward = - (0.8 * wasting_time_crane1 + 0.2 * wasting_time_crane2)
-        # else:
-        #     wasting_time_crane1 = self.model.reward_info["Crane-2"]["Wasting Time_Crane-1"] / 87
-        #     wasting_time_crane2 = self.model.reward_info["Crane-2"]["Wasting Time_Crane-2"] / 87
-        #     reward = - (0.2 * wasting_time_crane1 + 0.8 * wasting_time_crane2)
-
         return reward
 
     def _get_state(self):
+        state = Data()
+
+        num_of_node = len(self.crane_list) + len(self.pile_list)
+        num_of_edge = num_of_node * (num_of_node - 1)
+
+        node_features = np.zeros((num_of_node, 2))
+        edge_index = np.zeros((2, num_of_edge))
+
+        for i, crane_name in enumerate(self.crane_list):
+            info = self.model.state_info[crane_name]
+            crane_current_x = info["Current Coord"][0]
+            crane_target_x = info["Target Coord"][0]
+
+            node_features[i, 0] = crane_current_x / 44
+            if not crane_target_x == -1:
+                node_features[i, 1] = crane_target_x / 44
+
+        for i, from_pile_name in enumerate(self.pile_list):
+            from_pile_x = self.model.piles[from_pile_name].coord[0]
+            node_features[i + len(self.crane_list), 0] = from_pile_x / 44
+
+            plates = self.model.piles[from_pile_name].plates
+            if len(plates) >= 1:
+                to_pile_name = self.model.piles[from_pile_name].plates[-1].to_pile
+                to_pile_x = self.model.piles[to_pile_name].coord[0]
+                node_features[i + len(self.crane_list), 1] = to_pile_x / 44
+
+        for i, crane_name in enumerate(self.crane_list):
+            idx = 0
+            edge_index[0, idx + i * (len(self.crane_list) - 1):idx + (i + 1) * (len(self.crane_list) - 1)] = i
+            edge_index[1, idx + i * (len(self.crane_list) - 1):idx + (i + 1) * (len(self.crane_list) - 1)] \
+                = [j for j in range(len(self.crane_list)) if j != i]
+
+            idx = len(self.crane_list)
+            edge_index[0, idx + i * len(self.pile_list):idx + (i + 1) * len(self.pile_list)] = i
+            edge_index[1, idx + i * len(self.pile_list):idx + (i + 1) * len(self.pile_list)] \
+                = range(len(self.crane_list), len(self.crane_list) + len(self.pile_list))
+
+            idx = len(self.crane_list) + len(self.crane_list) * len(self.pile_list)
+            edge_index[0, idx + i * len(self.pile_list):idx + (i + 1) * len(self.pile_list)] \
+                = range(len(self.crane_list), len(self.crane_list) + len(self.pile_list))
+            edge_index[1, idx + i * len(self.pile_list):idx + (i + 1) * len(self.pile_list)] = i
+
+        idx = len(self.crane_list) + 2 * len(self.crane_list) * len(self.pile_list)
+        for i, from_pile_name in enumerate(self.pile_list):
+            edge_index[0, idx + i * (len(self.pile_list) - 1):idx + (i + 1) * (len(self.pile_list) - 1)] \
+                = len(self.crane_list) + i
+            edge_index[1, idx + i * (len(self.pile_list) - 1):idx + (i + 1) * (len(self.pile_list) - 1)] \
+                = [len(self.crane_list) + j for j in range(len(self.pile_list)) if j != i]
+
+        edge_type = torch.concat([0 * torch.ones(len(self.crane_list)),
+                                  1 * torch.ones(len(self.crane_list) * len(self.pile_list)),
+                                  2 * torch.ones(len(self.crane_list) * len(self.pile_list)),
+                                  3 * torch.ones(len(self.pile_list) * (len(self.pile_list) - 1))])
+
+        state.x = torch.tensor(node_features, dtype=torch.float32)
+        state.edge_index = torch.tensor(edge_index, dtype=torch.long)
+        state.edge_type = edge_type.type(torch.long)
+
+        return state
+
+    def _get_state_hetero(self):
         state = HeteroData()
 
         num_of_node_for_crane = self.num_of_cranes
