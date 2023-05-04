@@ -55,6 +55,7 @@ if __name__ == "__main__":
     n_resh_to = cfg.n_resh_to
     n_retr_from = cfg.n_retr_from
 
+    n_units = cfg.n_units
     n_step = cfg.n_step
     capacity = cfg.capacity
     alpha = cfg.alpha
@@ -89,7 +90,7 @@ if __name__ == "__main__":
 
     agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
                   capacity, alpha, beta_start, beta_steps,
-                  n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                  n_units, n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
     # writer = SummaryWriter(log_dir)
 
     if cfg.load_model:
@@ -152,7 +153,7 @@ if __name__ == "__main__":
                 loss_avg = sum(loss_list) / len(loss_list)
                 print("episode: %d | total_rewards: %.2f | loss: %.2f" % (episode, reward_tot, loss_avg))
 
-                vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
+                # vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
                 vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
@@ -171,6 +172,6 @@ if __name__ == "__main__":
         if episode % save_every == 0:
             agent.save(episode, model_dir)
 
-        agent.scheduler.step()
+        # agent.scheduler.step()
 
     # writer.close()

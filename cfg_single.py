@@ -17,6 +17,7 @@ def get_cfg():
     parser.add_argument("--n_episode", type=int, default=10000, help="Number of episodes to train")
     parser.add_argument("--eval_every", type=int, default=100, help="Evaluate every x frames")
     parser.add_argument("--save_every", type=int, default=1000, help="Save a model every x frames")
+    parser.add_argument("--n_units", type=int, default=256, help="Number of units in hidden layers of IQN")
     parser.add_argument("--n_step", type=int, default=10, help="Multistep IQN")
     parser.add_argument("--capacity", type=int, default=1000, help="Replay memory size")
     parser.add_argument("--alpha", type=float, default=0.6, help="Control paramter for priorizted sampling")

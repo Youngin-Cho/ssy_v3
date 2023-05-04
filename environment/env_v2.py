@@ -159,7 +159,7 @@ class SteelStockYard(object):
 
         return reward
 
-    def _get_state(self):
+    def _get_state_homo(self):
         state = Data()
 
         num_of_node = len(self.crane_list) + len(self.pile_list)
@@ -221,7 +221,7 @@ class SteelStockYard(object):
 
         return state
 
-    def _get_state_hetero(self):
+    def _get_state(self):
         state = HeteroData()
 
         num_of_node_for_crane = self.num_of_cranes
