@@ -124,7 +124,7 @@ class Agent():
         self.qnetwork_target = Network(state_size, action_size, meta_data, look_ahead, n_units, N).to(device)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
-        self.optimizer = optim.RAdam(self.qnetwork_local.parameters())
+        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=base_lr)
         # self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
         # self.scheduler = CyclicLR(optimizer=self.optimizer, base_lr=base_lr, max_lr=max_lr,
         #                           step_size_up=step_size_up, step_size_down=step_size_down, mode="triangular2", cycle_momentum=False)
