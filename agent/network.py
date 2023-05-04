@@ -63,8 +63,8 @@ class Network(nn.Module):
 
         # self.conv1 = HGTConv(self.state_size, 512, meta_data, head=4)
         # self.conv2 = HGTConv(512, 512, meta_data, head=4)
-        self.conv1 = RGATConv(2, 128, num_relations=4, heads=4, concat=False)
-        self.conv2 = RGATConv(128, 128, num_relations=4, heads=4, concat=False)
+        self.conv1 = RGATConv(2, 128, num_relations=4, heads=2, concat=False)
+        self.conv2 = RGATConv(128, 128, num_relations=4, heads=2, concat=False)
         self.cos_embedding = nn.Linear(self.n_cos, 128)
         self.ff_1 = NoisyLinear(128, 128)
         self.ff_2 = NoisyLinear(128, 128)
