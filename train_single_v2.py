@@ -153,7 +153,7 @@ if __name__ == "__main__":
                 loss_avg = sum(loss_list) / len(loss_list)
                 print("episode: %d | total_rewards: %.2f | loss: %.2f" % (episode, reward_tot, loss_avg))
 
-                # vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
+                vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
                 vessl.log(payload={"Reward": reward_tot}, step=episode)
                 vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
