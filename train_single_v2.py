@@ -172,6 +172,6 @@ if __name__ == "__main__":
         if episode % save_every == 0:
             agent.save(episode, model_dir)
 
-        # agent.scheduler.step()
+        agent.scheduler.step()
 
     # writer.close()
