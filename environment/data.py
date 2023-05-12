@@ -161,12 +161,12 @@ if __name__ == '__main__':
     num_of_reshuffle_to_piles = 20
     num_of_retrieval_from_piles = 4
 
-    file_dir = "../input/validation/{0}-{1}-{2}-{3}/".format(num_of_storage_to_piles, num_of_reshuffle_from_piles,
+    file_dir = "../input/test/{0}-{1}-{2}-{3}/".format(num_of_storage_to_piles, num_of_reshuffle_from_piles,
                                                              num_of_reshuffle_to_piles, num_of_retrieval_from_piles)
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
 
-    iteration = 10
+    iteration = 5
     for i in range(1, iteration + 1):
         file_path = file_dir + "problem-{0}.xlsx".format(i)
         data_storage, data_reshuffle, data_retrieval = generate_data(num_of_storage_to_piles=10,

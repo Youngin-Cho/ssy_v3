@@ -23,14 +23,7 @@ def get_location_id(pile_name):
     return id
 
 
-def get_moving_time(from_location, to_location):
-    if type(from_location).__name__ == "Conveyor" or type(to_location).__name__ == "Conveyor":
-        x_time = 2 * abs(to_location.coord[0] - from_location[0])
-        y_time = 0.0
-    else:
-        x_time = 2 * abs(to_location.coord[0] - from_location[0])
-        y_time = abs(to_location.coord[1] - from_location.coord[1])
-
-    moving_time = max(x_time, y_time)
-
-    return moving_time
+def get_moving_time(from_xcoord=None, to_xcoord=None):
+    x_velocity = 0.5
+    x_moving_time = abs(to_xcoord - from_xcoord) / x_velocity
+    return x_moving_time
