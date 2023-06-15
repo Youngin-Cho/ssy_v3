@@ -10,7 +10,7 @@ from utilities import get_coord, get_moving_time
 # random.seed(42)
 
 class PriorityGet(simpy.resources.base.Get):
-    def __init__(self, resource, priority=10, preempt=True):
+    def __init__(self, resource, filter, priority=10, preempt=True):
         self.priority = priority
         self.preempt = preempt
         self.time = resource._env.now
@@ -184,6 +184,7 @@ class Management:
         self.move_list = list(df_storage["pileno"].values) + list(df_reshuffle["pileno"].values)
         self.blocked_piles = list()
         self.last_action = None
+        self.waiting_crane = None
         self.state_info = {crane.name: {"Current Coord": crane.current_coord,
                                         "Target Coord": (-1.0, -1.0)} for crane in self.cranes.items}
         self.reward_info = {crane.name: {"Empty Travel Time": 0.0,
@@ -319,6 +320,7 @@ class Management:
 
     def crane_run(self, crane, action):
         if action == "Waiting":
+            self.waiting_crane = crane
             crane.idle = True
             crane.idle_event = self.env.event()
 
@@ -482,7 +484,13 @@ class Management:
                 self.monitor.record(self.env.now, "Release", crane=None, location=conveyor.name, plate=None, tag=None)
 
                 # request a crane
-                crane = yield self.cranes.get(priority=1)
+                if self.waiting_crane is not None:
+                    if self.waiting_crane.name == 'Crane-1' and conveyor.name == "cn3":
+                        crane = yield self.cranes.get(priority=1)
+                    else:
+                        pass
+                else:
+                    crane = yield self.cranes.get(priority=1)
 
                 # 출고 작업을 수행할 강재가 적치되어 있는 파일 리스트 생성
                 candidates = [i for i in self.df_retrieval["pileno"].unique()
