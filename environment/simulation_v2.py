@@ -8,21 +8,35 @@ from utilities import get_coord, get_moving_time
 
 
 # random.seed(42)
-
-class PriorityGet(simpy.resources.base.Get):
-    def __init__(self, resource, filter, priority=10, preempt=True):
+class PriorityFilterGet(simpy.resources.store.FilterStore.get):
+    def __init__(self, resource, filt, priority=10, preempt=True):
         self.priority = priority
         self.preempt = preempt
         self.time = resource._env.now
         self.usage_since = None
         self.key = (self.priority, self.time, not self.preempt)
-        super().__init__(resource)
+        super().__init__(resource, filt)
 
 
-class PriorityBaseStore(simpy.resources.store.Store):
-
+class PriorityFilterStore(simpy.resources.store.FilterStore):
     GetQueue = simpy.resources.resource.SortedQueue
-    get = simpy.core.BoundClass(PriorityGet)
+    get = simpy.core.BoundClass(PriorityFilterGet)
+
+
+# class PriorityGet(simpy.resources.base.Get):
+#     def __init__(self, resource, filter, priority=10, preempt=True):
+#         self.priority = priority
+#         self.preempt = preempt
+#         self.time = resource._env.now
+#         self.usage_since = None
+#         self.key = (self.priority, self.time, not self.preempt)
+#         super().__init__(resource)
+#
+#
+# class PriorityBaseStore(simpy.resources.store.Store):
+#
+#     GetQueue = simpy.resources.resource.SortedQueue
+#     get = simpy.core.BoundClass(PriorityGet)
 
 
 class Plate:
