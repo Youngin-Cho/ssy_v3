@@ -64,8 +64,6 @@ class Network(nn.Module):
 
         self.conv1 = HGTConv(self.state_size, n_units, meta_data, head=4)
         self.conv2 = HGTConv(n_units, n_units, meta_data, head=4)
-        # self.conv1 = RGATConv(2, 128, num_relations=4, heads=2, concat=False)
-        # self.conv2 = RGATConv(128, 128, num_relations=4, heads=2, concat=False)
         self.cos_embedding = nn.Linear(self.n_cos, n_units)
         self.ff_1 = NoisyLinear(n_units, n_units)
         self.ff_2 = NoisyLinear(n_units, n_units)
@@ -95,23 +93,6 @@ class Network(nn.Module):
         batch_idx_plate = batch_idx.repeat_interleave(int(x_dict["plate"].size(0) / batch_size))
         batch_idx_crane = batch_idx.repeat_interleave(int(x_dict["crane"].size(0) / batch_size))
         x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["plate"], batch_idx_plate)
-        # num_crane = int(x_dict["crane"].size(0) / batch_size)
-        # x = x_dict["crane"][int(crane_id)::num_crane, :] + global_add_pool(x_dict["plate"], batch_idx_plate)
-        # x = torch.cat((x_dict["crane"][int(crane_id - 1)::num_crane, :], global_add_pool(x_dict["pile"], batch_idx)), dim=1)
-        # x = x_dict["crane"][int(crane_id - 1)::num_crane, :]
-
-        # x = input.x
-        # edge_index = input.edge_index
-        # edge_type = input.edge_type
-
-        # x = self.conv1(x, edge_index, edge_type=edge_type)
-        # x = F.selu(x)
-        # x = self.conv2(x, edge_index, edge_type=edge_type)
-        # x = F.selu(x)
-
-        # batch_idx = torch.arange(batch_size).to(device)
-        # batch_idx = batch_idx.repeat_interleave(int(x.size(0) / batch_size))
-        # x = global_add_pool(x, batch_idx)
 
         cos, taus = self.calc_cos(batch_size, num_tau)  # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)
@@ -125,7 +106,6 @@ class Network(nn.Module):
         advantage = self.advantage(x, noisy=noisy)
         value = self.value(x, noisy=noisy)
         out = value + advantage - advantage.mean(dim=1, keepdim=True)
-        # out = self.ff_2(x)
 
         return out.view(batch_size, num_tau, self.action_size), taus
 

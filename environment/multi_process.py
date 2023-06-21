@@ -1,7 +1,6 @@
-import numpy as np
 from multiprocessing import Process, Pipe
 
-from environment.env import *
+from history.env_old_graph import *
 
 
 def worker(remote, parent_remote, parameters_wrapper):

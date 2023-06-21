@@ -1,4 +1,5 @@
 import os
+import vessl
 import torch
 import random
 import numpy as np
@@ -7,21 +8,21 @@ import pandas as pd
 from agent.iqn import *
 from benchmark.heuristics import *
 from environment.data import *
-from environment.env_v2 import *
+from environment.env import *
 
 
 if __name__ == "__main__":
     algorithm = ["RL", "SD", "MA", "Random"]
     iteration = 10
 
-    test_dir = "./input/case_study/case1/case1-4/"
+    test_dir = "./input/case_study/case1/case1-1/"
     test_paths = os.listdir(test_dir)
 
-    # simulation_dir = './output/test/simulation/'
+    # simulation_dir = './output/test/simulation/case1/case1-1'
     # if not os.path.exists(simulation_dir):
     #     os.makedirs(simulation_dir)
 
-    log_dir = './output/case_study/case1/case1-4/'
+    log_dir = './output/case_study/case1/case1-1/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -89,7 +90,7 @@ if __name__ == "__main__":
                     crane_in_decision = info["crane_id"]
 
                     if done:
-                        # log = env.get_logs(simulation_dir + 'event_log_{0}_{1}.csv'.format(algorithm, i))
+                        # log = env.get_logs(simulation_dir + 'event_log_{0}_{1}_{2}.csv'.format(name, prob, j))
                         log = env.get_logs()
                         makespan = log["Time"].max()
                         for crane_name in env.model.reward_info.keys():
