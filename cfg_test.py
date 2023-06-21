@@ -12,7 +12,7 @@ def get_cfg():
     parser.add_argument("--iteration", type=int, default=10, help="number of iterations")
     parser.add_argument("--random_seed", type=int, default=42, help="random seed")
 
-    parser.add_argument("--safe_margin", type=int, default=5, help="safety margin between two cranes")
+    parser.add_argument("--safety_margin", type=int, default=5, help="safety margin between two cranes")
 
     args = parser.parse_args()
 
