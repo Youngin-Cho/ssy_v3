@@ -66,16 +66,16 @@ if __name__ == "__main__":
                 env = SteelStockYard(df_storage=df_storage, df_reshuffle=df_reshuffle, df_retrieval=df_retrieval,
                                      safety_margin=safety_margin)
 
-                if algorithm == "RL":
+                if name == "RL":
                     device = torch.device("cpu")
                     agent = Agent(env.state_size, env.action_size, env.meta_data, n_units=cfg.n_units)
                     checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
                     agent.qnetwork_local.load_state_dict(checkpoint['model_state_dict'])
-                elif algorithm == "SD":
+                elif name == "SD":
                     agent = shortest_distance
-                elif algorithm == "LD":
+                elif name == "LD":
                     agent = longest_distance
-                elif algorithm == "MA":
+                elif name == "MA":
                     agent = minimize_avoiding_time
                 else:
                     agent = random_selection
@@ -87,14 +87,14 @@ if __name__ == "__main__":
 
                 while not done:
                     possible_actions = env.get_possible_actions()
-                    if algorithm == "RL":
+                    if name == "RL":
                         action = agent.get_action([state], [possible_actions], eps=0.0,
                                                   noisy=False, crane_id=env.crane_in_decision)[0]
-                    elif algorithm == "SD":
+                    elif name == "SD":
                         action = agent(state, possible_actions, crane_id=crane_in_decision)
-                    elif algorithm == "LD":
+                    elif name == "LD":
                         action = agent(state, possible_actions, crane_id=crane_in_decision)
-                    elif algorithm == "MA":
+                    elif name == "MA":
                         action = agent(state, possible_actions, crane_id=crane_in_decision)
                     else:
                         action = agent(possible_actions)
