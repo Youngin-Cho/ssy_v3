@@ -19,6 +19,7 @@ if __name__ == "__main__":
 
     model_path = cfg.model_path
     data_folder = cfg.data_folder
+    log_folder = cfg.log_folder
 
     algorithm = cfg.algorithm
     iteration = cfg.iteration
@@ -30,9 +31,8 @@ if __name__ == "__main__":
     # if not os.path.exists(simulation_dir):
     #     os.makedirs(simulation_dir)
 
-    log_dir = '/output/case_study/case1/case1-1/'
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
 
     test_paths = os.listdir(data_folder)
     index = [str(i) for i in range(1, iteration + 1)] + ["avg"]

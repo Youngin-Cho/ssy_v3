@@ -6,6 +6,7 @@ def get_cfg():
 
     parser.add_argument("--model_path", type=str, default=None, help="model file path")
     parser.add_argument("--data_folder", type=str, default=None, help="test data path")
+    parser.add_argument("--log_folder", type=str, default=None, help="log file path")
 
     parser.add_argument("--n_units", type=int, default=256, help="number of units in hidden layers of IQN")
     parser.add_argument("--algorithm", type=str, default="RL", help="test algorithm")
