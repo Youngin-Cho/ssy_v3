@@ -1,5 +1,6 @@
 import os
 import random
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -266,12 +267,175 @@ def generate_data_temp(num_of_storage_to_piles=10,  # 적치 작업 시 강재�
 
     return df_storage, df_reshuffle, df_retrieval
 
+def generate_data(bays=("A", "B"),  # row 이름
+                  storage=True,  # 적치 계획 데이터를 생성할 지 여부
+                  reshuffle=True,  # 선별 계획 데이터를 생성할 지 여부
+                  retrieval=True,  # 출고 계획 데이터를 생성할 지 여부
+                  input_points=("A00", "B00"),  # 강재가 입고되는 위치
+                  output_points=("cn1", "cn2", "cn3"),  # 강재가 출고되는 위치
+                  n_bays_in_area0=1, # 0번 영역 내 bay의 수
+                  n_bays_in_area1=15,  # 1번 영역 내 bay의 수
+                  n_bays_in_area2=6,  # 2번 영역 내 bay의 수
+                  n_bays_in_area3=3,  # 3번 영역 내 bay의 수
+                  n_bays_in_area4=6,  # 4번 영역 내 bay의 수
+                  n_bays_in_area5=10,  # 5번 영역 내 bay의 수
+                  n_bays_in_area6=1,  # 6번 영역 내 bay의 수
+                  n_from_piles_storage=2,  # 적치 작업의 대상 강재가 적치된 가상 파일의 수 (from pile)
+                  n_to_piles_storage=5,  # 적치 작업의 대상 강재가 이동할 파일의 수 (to pile)
+                  n_from_piles_reshuffle=10,  # 선별 작업의 대상 강재가 적치된 파일의 수 (from pile)
+                  n_to_piles_reshuffle=10,   # 선별 작업의 대상 강재가 이동할 파일의 수 (to pile)
+                  n_from_piles_retrieval_cn1=5,  # cn1 출고 작업의 대상 강재가 적치된 파일의 수 (from pile)
+                  n_from_piles_retrieval_cn2=5,  # cn2 출고 작업의 대상 강재가 적치된 파일의 수 (from pile)
+                  n_from_piles_retrieval_cn3=2,  # cn3 출고 작업의 대상 강재가 적치된 파일의 수 (from pile)
+                  n_plates_for_storage=150,  # 입고 지점에 위치한 적치 대상 강재의 평균 개수
+                  n_plates_for_reshuffle=150,  # 각 파일에 위치한 선별 대상 강재의 평균 개수
+                  n_plates_for_retrieval=150,  # 각 파일에 위치한 출고 대상 강재의 평균 개수
+                  safety_margin=5,  # 크레인 간 안전 거리
+                  file_path=None):
+
+    # 입고, 선별, 출고 데이터를 저장하기 위한 데이터프레임 생성
+    df_storage = pd.DataFrame(columns=["pileno", "pileseq", "markno", "unitw", "topile"])
+    df_reshuffle = pd.DataFrame(columns=["pileno", "pileseq", "markno", "unitw", "topile"])
+    df_retrieval = pd.DataFrame(columns=["pileno", "pileseq", "markno", "unitw", "topile"])
+
+    # 강재 적치장 내 모든 파일이 포함된 리스트 생성
+    id_start = 0
+    piles_in_area0 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area0 + 1)]
+    id_start += n_bays_in_area0
+    piles_in_area1 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area1 + 1)]
+    id_start += n_bays_in_area1
+    piles_in_area2 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area2 + 1)]
+    id_start += n_bays_in_area2
+    piles_in_area3 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area3 + 1)]
+    id_start += n_bays_in_area3
+    piles_in_area4 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area4 + 1)]
+    id_start += n_bays_in_area4
+    piles_in_area5 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area5 + 1)]
+    id_start += n_bays_in_area5
+    piles_in_area6 = [row_id + str(col_id).rjust(2, '0') for row_id in bays for col_id in
+                      range(id_start, id_start + n_bays_in_area6 + 1)]
+
+    piles_all = piles_in_area1 + piles_in_area2 + piles_in_area3 + piles_in_area4 + piles_in_area5 + piles_in_area6
+    x_all = np.arange(1, int(len(piles_all) / len(bays)) + 1)
+    x_all[:] += 1
+    x_all[n_bays_in_area1 + n_bays_in_area2:] += 1
+    x_all[n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3:] += 1
+    mapping_from_pile_to_x = {pile: x for pile, x in zip(piles_all, np.tile(x_all, 2))}
+
+    piles_retrieval_conveyor = piles_in_area2 + piles_in_area3 + piles_in_area4
+    piles_retrieval_truck = piles_in_area6
+    piles_reshuffle = piles_in_area1 + piles_in_area5
+
+    # 출고 계획 생성
+    if retrieval:
+        candidates = piles_in_area2 + piles_in_area3 + piles_in_area4
+        from_piles_retrieval_cn1 = random.sample(candidates, n_from_piles_retrieval_cn1)
+        candidates = [i for i in candidates if not i in from_piles_retrieval_cn1]
+        from_piles_retrieval_cn2 = random.sample(candidates, n_from_piles_retrieval_cn1)
+        candidates = piles_in_area6
+        from_piles_retrieval_cn3 = random.sample(candidates, n_from_piles_retrieval_cn3)
+        from_piles_retrieval = from_piles_retrieval_cn1 + from_piles_retrieval_cn2 + from_piles_retrieval_cn3
+        for pile in from_piles_retrieval:
+            num_of_plates = random.randint(int(0.9 * n_plates_for_retrieval), int(1.1 * n_plates_for_retrieval))
+            pileno = [pile] * num_of_plates
+            pileseq = [str(i).rjust(3, '0') for i in range(1, num_of_plates + 1)]
+            markno = ["SP-RT-%s-%s" % (pile, i) for i in pileseq]
+            unitw = np.random.uniform(0.141, 19.294, num_of_plates)
+            if pile in from_piles_retrieval_cn1:
+                topile = ["cn1"] * num_of_plates
+            elif pile in from_piles_retrieval_cn2:
+                topile = ["cn2"] * num_of_plates
+            else:
+                topile = ["cn3"] * num_of_plates
+            df_temp = pd.DataFrame({"pileno": pileno, "pileseq": pileseq, "markno": markno, "unitw": unitw, "topile": topile})
+            df_retrieval = pd.concat([df_retrieval, df_temp], ignore_index=True)
+    else:
+        from_piles_retrieval = []
+
+    # 선별 계획 생성
+    if reshuffle:
+        candidates = piles_in_area1 + piles_in_area5
+        from_piles_reshuffle = random.sample(candidates, n_from_piles_reshuffle)
+        candidates = [i for i in piles_all if i not in from_piles_retrieval]
+        candidates = [i for i in candidates if i not in from_piles_reshuffle]
+        to_piles_reshuffle = random.sample(candidates, n_to_piles_reshuffle)
+
+        for pile in to_piles_reshuffle:
+            x = mapping_from_pile_to_x[pile]
+            if x < 1 + safety_margin:
+                to_piles_reshuffle_rev = [i for i in to_piles_reshuffle
+                                          if mapping_from_pile_to_x[i] <= max(x_all) + 1 - safety_margin]
+            elif x > max(x_all) + 1 - safety_margin:
+                to_piles_reshuffle_rev = [i for i in to_piles_reshuffle
+                                          if mapping_from_pile_to_x[i] >= 1 + safety_margin]
+            else:
+                to_piles_reshuffle_rev = to_piles_reshuffle
+            num_of_plates = random.randint(int(0.9 * n_plates_for_reshuffle), int(1.1 * n_plates_for_reshuffle))
+            pileno = [pile] * num_of_plates
+            pileseq = [str(i).rjust(3, '0') for i in range(1, num_of_plates + 1)]
+            markno = ["SP-RS-%s-%s" % (pile, i) for i in pileseq]
+            unitw = np.random.uniform(0.141, 19.294, num_of_plates)
+            topile = random.choices(to_piles_reshuffle_rev, k=num_of_plates)
+            df_temp = pd.DataFrame({"pileno": pileno, "pileseq": pileseq, "markno": markno, "unitw": unitw, "topile": topile})
+            df_reshuffle = pd.concat([df_reshuffle, df_temp], ignore_index=True)
+    else:
+        from_piles_reshuffle = []
+
+    # 적치 계획 생성
+    if storage:
+        n_from_piles_storage
+        if n_to_piles_storage == 1:
+            from_piles_storage = [bays[0] + "00"]
+        elif n_to_piles_storage == 2:
+            from_piles_storage = []
+        candidates = piles_in_area1 + piles_in_area5
+        candidates = [i for i in candidates if i not in from_piles_reshuffle]
+        candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= max(x_all) + 1 - safety_margin]
+        to_piles_storage = random.sample(candidates, n_to_piles_storage)
+
+        for pile in from_piles_storage:
+            num_of_plates = random.randint(int(0.9 * n_plates_for_storage), int(1.1 * n_plates_for_storage))
+            pileno = [pile] * num_of_plates
+            pileseq = [str(i).rjust(3, '0') for i in range(1, num_of_plates + 1)]
+            markno = ["SP-ST-%s-%s" % (pile, i) for i in pileseq]
+            unitw = np.random.uniform(0.141, 19.294, num_of_plates)
+            topile = random.choices(to_piles_storage, k=num_of_plates)
+            df_temp = pd.DataFrame({"pileno": pileno, "pileseq": pileseq, "markno": markno, "unitw": unitw, "topile": topile})
+            df_storage = pd.concat([df_storage, df_temp], ignore_index=True)
+
+
+
+
 
 if __name__ == '__main__':
-    num_of_storage_to_piles = 5
+    storage = True
+    reshuffle = True
+    retrieval = True
+
+    input_points = ["A00"]
+    output_points = ["cn1", "cn2", "cn3"]
+
+    n_bays_in_area1 = 15
+    n_bays_in_area2 = 6
+    n_bays_in_area3 = 3
+    n_bays_in_area4 = 6
+    n_bays_in_area5 = 9
+    n_bays_in_area6 = 1
+
+    num_of_storage_to_piles = 0
     num_of_reshuffle_from_piles = 10
     num_of_reshuffle_to_piles = 10
     num_of_retrieval_from_piles = 10
+
+    n_plates_for_storage = 150
+    n_plates_for_reshuffle = 150
+    n_plates_for_retrieval = 150
 
     # file_dir = "../input/test/{0}-{1}-{2}-{3}/".format(num_of_storage_to_piles, num_of_reshuffle_from_piles,
     #                                                          num_of_reshuffle_to_piles, num_of_retrieval_from_piles)
