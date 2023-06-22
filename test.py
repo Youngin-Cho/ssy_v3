@@ -26,6 +26,7 @@ if __name__ == "__main__":
     random_seed = cfg.random_seed
 
     safety_margin = cfg.safety_margin
+    crane_id = cfg.crane_id
 
     # simulation_dir = './output/test/simulation/case1/case1-1'
     # if not os.path.exists(simulation_dir):
@@ -38,6 +39,8 @@ if __name__ == "__main__":
     index = [str(i) for i in range(1, iteration + 1)] + ["avg"]
     columns = ["P%d" % i for i in range(1, len(test_paths) + 1)]
     list_algorithms = ["RL", "SD", "MA", "RAND"] if algorithm == "ALL" else [algorithm]
+
+    working_crane_ids = ("Crane-1", "Crane-2") if crane_id == "ALL" else (crane_id,)
 
     for name in list_algorithms:
         random.seed(random_seed)
@@ -64,7 +67,7 @@ if __name__ == "__main__":
                 df_retrieval = pd.read_excel(data_dir + path, sheet_name="retrieval", engine="openpyxl")
 
                 env = SteelStockYard(df_storage=df_storage, df_reshuffle=df_reshuffle, df_retrieval=df_retrieval,
-                                     safety_margin=safety_margin)
+                                     working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
                 if name == "RL":
                     device = torch.device("cpu")

@@ -198,10 +198,12 @@ class Monitor:
 
 
 class Management:
-    def __init__(self, df_storage, df_reshuffle, df_retrieval, bays=("A", "B"), safety_margin=5):
+    def __init__(self, df_storage, df_reshuffle, df_retrieval,
+                 bays=("A", "B"), working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
         self.df_storage = df_storage
         self.df_reshuffle = df_reshuffle
         self.df_retrieval = df_retrieval
+        self.working_crane_ids = working_crane_ids
         self.bays = bays
         self.safety_margin = safety_margin
 
@@ -276,8 +278,10 @@ class Management:
         crane1.opposite = crane2
         crane2.opposite = crane1
 
-        cranes.put(crane1)
-        cranes.put(crane2)
+        if crane1.name in self.working_crane_ids:
+            cranes.put(crane1)
+        if crane2.name in self.working_crane_ids:
+            cranes.put(crane2)
 
         monitor = Monitor()
 

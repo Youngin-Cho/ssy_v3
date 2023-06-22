@@ -11,7 +11,7 @@ from utilities import get_location_id
 class SteelStockYard(object):
     def __init__(self, look_ahead=2,  # 상태 구성 시 각 파일에서 포함할 강재의 수
                  bays=("A", "B"),  # 강재적치장의 베이 이름
-                 num_of_cranes=2,
+                 working_crane_ids=("Crane-1", "Crane-2"),
                  safety_margin=5,
                  num_of_storage_to_piles=10,  # 적치 작업 시 강재를 적치할 파일의 수 (데이터 랜덤 생성 시)
                  num_of_reshuffle_from_piles=10,  # 선별 작업 시 이동할 강재가 적치된 파일의 수 (데이터 랜덤 생성 시)
@@ -23,7 +23,7 @@ class SteelStockYard(object):
 
         self.look_ahead = look_ahead
         self.bays = bays
-        self.num_of_cranes = num_of_cranes
+        self.working_crane_ids = working_crane_ids
         self.safety_margin = safety_margin
         self.num_of_storage_to_piles = num_of_storage_to_piles
         self.num_of_reshuffle_from_piles = num_of_reshuffle_from_piles
@@ -51,7 +51,7 @@ class SteelStockYard(object):
 
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
-                                bays=self.bays, safety_margin=self.safety_margin)
+                                bays=self.bays, working_crane_ids=working_crane_ids, safety_margin=self.safety_margin)
 
         self.action_mapping = {i + 1: pile_name for i, pile_name in enumerate(self.model.piles.keys())}
         self.action_mapping_inverse = {y: x for x, y in self.action_mapping.items()}
@@ -97,7 +97,7 @@ class SteelStockYard(object):
                                                                                   self.bays)
 
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
-                                bays=self.bays, safety_margin=self.safety_margin)
+                                bays=self.bays, working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
         self.crane_list = [crane.name for crane in self.model.cranes.items]
 
