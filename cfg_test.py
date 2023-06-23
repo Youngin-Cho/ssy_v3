@@ -10,7 +10,6 @@ def get_cfg():
 
     parser.add_argument("--n_units", type=int, default=256, help="number of units in hidden layers of IQN")
     parser.add_argument("--algorithm", type=str, default="ALL", help="test algorithm")
-    parser.add_argument("--iteration", type=int, default=10, help="number of iterations")
     parser.add_argument("--random_seed", type=int, default=42, help="random seed")
 
     parser.add_argument("--crane_id", type=str, default="ALL", help="working crane ids")
