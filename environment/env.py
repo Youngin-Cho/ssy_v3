@@ -123,11 +123,11 @@ class SteelStockYard(object):
             from_pile_x = self.model.piles[from_pile_name].coord[0]
             to_pile_x = self.model.piles[to_pile_name].coord[0]
 
-            if self.crane_in_decision == 0 and from_pile_x > 43 - self.safety_margin:
+            if self.crane_in_decision == 0 and from_pile_x > 44 - self.safety_margin:
                 possible = False
             if self.crane_in_decision == 1 and from_pile_x < 1 + self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 0 and to_pile_x > 43 - self.safety_margin:
+            if self.crane_in_decision == 0 and to_pile_x > 44 - self.safety_margin:
                 possible = False
             if self.crane_in_decision == 1 and to_pile_x < 1 + self.safety_margin:
                 possible = False

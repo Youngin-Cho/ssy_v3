@@ -244,7 +244,8 @@ class Management:
     def _modeling(self):
         env = simpy.Environment()
 
-        pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in self.bays for col_id in range(0, 41)]
+        pile_list = ["IA01", "IB02"]
+        pile_list += [row_id + str(col_id).rjust(2, '0') for row_id in self.bays for col_id in range(1, 41)]
         piles = OrderedDict({name: Pile(name, get_coord(name)) for name in pile_list})
 
         conveyors = OrderedDict()
@@ -369,7 +370,7 @@ class Management:
             to_pile = self.piles[from_pile.plates[-1].to_pile]
 
             # identify the current job
-            if "00" in action:
+            if "I" in action:
                 tag = "Storage"
             else:
                 tag = "Reshuflle"
@@ -443,6 +444,9 @@ class Management:
                     crane.empty_travel_time += moving_time
 
         else:
+            if crane.current_coord[0] < 0:
+                print(0)
+                log = self.monitor.get_logs("./temp.csv")
             self.monitor.record(self.env.now, "Move_from", crane=crane.name,
                                 location=self.location_mapping[crane.current_coord].name, plate=None, tag=tag)
             moving_time = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],

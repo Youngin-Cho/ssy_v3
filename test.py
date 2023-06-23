@@ -15,7 +15,7 @@ from cfg_test import *
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
+    # vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
     model_path = cfg.model_path
     data_dir = cfg.data_dir
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         list_avoiding_time = []
         list_computing_time = []
 
-        for prob, path in zip(columns, test_paths):
+        for prob, path in zip(index, test_paths):
             random.seed(random_seed)
 
             makespan = 0.0

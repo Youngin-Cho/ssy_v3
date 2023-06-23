@@ -301,8 +301,9 @@ def generate_data(rows=("A", "B"),  # row 이름
 
     piles_in_area0 = []
     for row_id in rows:
-        for col_id in range(1, n_bays_in_area0 + 1):
-            pile = "I" + row_id + str(col_id).rjust(2, '0')
+        for col_id in range(0, n_bays_in_area0):
+            # pile = "I" + row_id + str(col_id).rjust(2, '0')
+            pile = row_id + str(col_id).rjust(2, '0')
             piles_in_area0.append(pile)
             mapping_from_pile_to_x[pile] = col_id
 
