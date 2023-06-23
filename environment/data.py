@@ -371,7 +371,7 @@ def generate_data(rows=("A", "B"),  # row 이름
         to_piles_reshuffle = random.sample(candidates, n_to_piles_reshuffle)
         # to_piles_reshuffle = ["A22", "A23", "A24", "B22", "B23", "B24"]
 
-        for pile in to_piles_reshuffle:
+        for pile in from_piles_reshuffle:
             x = mapping_from_pile_to_x[pile]
             if x < 1 + safety_margin:
                 to_piles_reshuffle_rev = [i for i in to_piles_reshuffle
@@ -449,7 +449,7 @@ if __name__ == '__main__':
     n_plates_for_retrieval = 150
 
     safety_margin = 5
-    file_dir = "../input/case_study/case2/case2-4/case2-4-3/"
+    file_dir = "../input/data/case_study/case2/case2-4/case2-4-1/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
