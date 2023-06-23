@@ -49,6 +49,7 @@ class SteelStockYard(object):
             self.random_data = False
             self.df_storage, self.df_reshuffle, self.df_retrieval = df_storage, df_reshuffle, df_retrieval
 
+        self.num_of_cranes = 2
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
                                 bays=self.bays, working_crane_ids=working_crane_ids, safety_margin=self.safety_margin)
