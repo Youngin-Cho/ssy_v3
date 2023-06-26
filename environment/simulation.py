@@ -301,36 +301,33 @@ class Management:
 
             self.state_info[crane.name]["Current Coord"] = crane.current_coord
             self.state_info[crane.name]["Target Coord"] = crane.target_coord
-            self.state_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
-            self.state_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
+            if crane.opposite.name in self.working_crane_ids:
+                self.state_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
+                self.state_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
 
-            # self.reward_info[crane.name]["Wasting Time_%s" % crane.name] \
-            #     = crane.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name]
-            # self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.name] = crane.wasting_time
-            # self.reward_info[crane.name]["Wasting Time_%s" % crane.opposite.name] \
-            #     = crane.opposite.wasting_time - self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name]
-            # self.reward_info[crane.name]["Wasting Time Cumulative_%s" % crane.opposite.name] = crane.opposite.wasting_time
-
+            # 크레인 대기 시간 기록
             self.reward_info[crane.name]["Waiting Time"] \
                 = crane.waiting_time - self.reward_info[crane.name]["Waiting Time Cumulative"]
-            self.reward_info[crane.opposite.name]["Waiting Time"] \
-                = crane.opposite.waiting_time - self.reward_info[crane.opposite.name]["Waiting Time Cumulative"]
             self.reward_info[crane.name]["Waiting Time Cumulative"] = crane.waiting_time
-            self.reward_info[crane.opposite.name]["Waiting Time Cumulative"] = crane.opposite.waiting_time
-
+            # 크레인의 empty travel time 기록
             self.reward_info[crane.name]["Empty Travel Time"] \
                 = crane.empty_travel_time - self.reward_info[crane.name]["Empty Travel Time Cumulative"]
-            self.reward_info[crane.opposite.name]["Empty Travel Time"] \
-                = crane.opposite.empty_travel_time - self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"]
             self.reward_info[crane.name]["Empty Travel Time Cumulative"] = crane.empty_travel_time
-            self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"] = crane.opposite.empty_travel_time
-
+            # 크레인의 avoiding time 기록
             self.reward_info[crane.name]["Avoiding Time"] \
                 = crane.avoiding_time - self.reward_info[crane.name]["Avoiding Time Cumulative"]
-            self.reward_info[crane.opposite.name]["Avoiding Time"] \
-                = crane.opposite.avoiding_time - self.reward_info[crane.opposite.name]["Avoiding Time Cumulative"]
             self.reward_info[crane.name]["Avoiding Time Cumulative"] = crane.avoiding_time
-            self.reward_info[crane.opposite.name]["Avoiding Time Cumulative"] = crane.opposite.avoiding_time
+
+            if crane.opposite.name in self.working_crane_ids:
+                self.reward_info[crane.opposite.name]["Waiting Time"] \
+                    = crane.opposite.waiting_time - self.reward_info[crane.opposite.name]["Waiting Time Cumulative"]
+                self.reward_info[crane.opposite.name]["Waiting Time Cumulative"] = crane.opposite.waiting_time
+                self.reward_info[crane.opposite.name]["Empty Travel Time"] \
+                    = crane.opposite.empty_travel_time - self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"]
+                self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"] = crane.opposite.empty_travel_time
+                self.reward_info[crane.opposite.name]["Avoiding Time"] \
+                    = crane.opposite.avoiding_time - self.reward_info[crane.opposite.name]["Avoiding Time Cumulative"]
+                self.reward_info[crane.opposite.name]["Avoiding Time Cumulative"] = crane.opposite.avoiding_time
 
             # 행동 선택을 위한 이벤트 생성
             self.decision_time = True

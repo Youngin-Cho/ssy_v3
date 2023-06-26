@@ -287,6 +287,7 @@ def generate_data(rows=("A", "B"),  # row 이름
                   n_plates_for_storage=150,  # 입고 지점에 위치한 적치 대상 강재의 평균 개수
                   n_plates_for_reshuffle=150,  # 각 파일에 위치한 선별 대상 강재의 평균 개수
                   n_plates_for_retrieval=150,  # 각 파일에 위치한 출고 대상 강재의 평균 개수
+                  working_crane_ids=("Crane-1", "Crane-2"),  # 작업을 수행할 크레인
                   safety_margin=5,  # 크레인 간 안전 거리
                   file_path=None):
 
@@ -339,8 +340,11 @@ def generate_data(rows=("A", "B"),  # row 이름
         from_piles_retrieval_cn1 = random.sample(candidates, n_from_piles_retrieval_cn1)
         candidates = [i for i in candidates if not i in from_piles_retrieval_cn1]
         from_piles_retrieval_cn2 = random.sample(candidates, n_from_piles_retrieval_cn2)
-        candidates = piles_in_area6
-        from_piles_retrieval_cn3 = random.sample(candidates, n_from_piles_retrieval_cn3)
+        if "Crane-2" in working_crane_ids:
+            candidates = piles_in_area6
+            from_piles_retrieval_cn3 = random.sample(candidates, n_from_piles_retrieval_cn3)
+        else:
+            from_piles_retrieval_cn3 = []
         from_piles_retrieval = from_piles_retrieval_cn1 + from_piles_retrieval_cn2 + from_piles_retrieval_cn3
         for pile in from_piles_retrieval:
             num_of_plates = random.randint(int(0.9 * n_plates_for_retrieval), int(1.1 * n_plates_for_retrieval))
@@ -362,9 +366,17 @@ def generate_data(rows=("A", "B"),  # row 이름
     # 선별 계획 생성
     if reshuffle:
         candidates = piles_in_area1 + piles_in_area5
+        if not "Crane-1" in working_crane_ids:
+            candidates = [i for i in candidates if mapping_from_pile_to_x[i] >= 1 + safety_margin]
+        if not "Crane-2" in working_crane_ids:
+            candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max - safety_margin]
         from_piles_reshuffle = random.sample(candidates, n_from_piles_reshuffle)
         candidates = [i for i in piles_all if (i not in from_piles_retrieval) and (i not in piles_in_area0)]
         candidates = [i for i in candidates if i not in from_piles_reshuffle]
+        if not "Crane-1" in working_crane_ids:
+            candidates = [i for i in candidates if mapping_from_pile_to_x[i] >= 1 + safety_margin]
+        if not "Crane-2" in working_crane_ids:
+            candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max - safety_margin]
         to_piles_reshuffle = random.sample(candidates, n_to_piles_reshuffle)
         # to_piles_reshuffle = ["A22", "A23", "A24", "B22", "B23", "B24"]
 
@@ -391,7 +403,10 @@ def generate_data(rows=("A", "B"),  # row 이름
 
     # 적치 계획 생성
     if storage:
-        from_piles_storage = random.sample(piles_in_area0, n_from_piles_storage)
+        if "Crane-1" in working_crane_ids:
+            from_piles_storage = random.sample(piles_in_area0, n_from_piles_storage)
+        else:
+            from_piles_storage = []
         candidates = piles_in_area1 + piles_in_area5
         candidates = [i for i in candidates if i not in from_piles_reshuffle]
         candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max - safety_margin]
@@ -444,8 +459,9 @@ if __name__ == '__main__':
     n_plates_for_reshuffle = 150
     n_plates_for_retrieval = 150
 
+    working_crane_ids = ("Crane-1",)
     safety_margin = 5
-    file_dir = "../input/data/case_study/case2/case2-3/case2-3-3/"
+    file_dir = "../input/data/case_study/case2/case2-1/case2-1-2/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
@@ -474,5 +490,6 @@ if __name__ == '__main__':
                             n_plates_for_storage=n_plates_for_storage,
                             n_plates_for_reshuffle=n_plates_for_reshuffle,
                             n_plates_for_retrieval=n_plates_for_retrieval,
+                            working_crane_ids=working_crane_ids,
                             safety_margin=safety_margin,
                             file_path=file_path)

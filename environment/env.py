@@ -236,9 +236,16 @@ class SteelStockYard(object):
         node_features_for_crane = np.zeros((num_of_node_for_crane, self.state_size["crane"]))
 
         for i, crane_name in enumerate(self.crane_list):
-            info = self.model.state_info[crane_name]
-            crane_current_x = info["Current Coord"][0]
-            crane_target_x = info["Target Coord"][0]
+            if crane_name in self.working_crane_ids:
+                info = self.model.state_info[crane_name]
+                crane_current_x = info["Current Coord"][0]
+                crane_target_x = info["Target Coord"][0]
+            else:
+                if crane_name == "Crane-1":
+                    crane_current_x = 2
+                else:
+                    crane_current_x = 43
+                crane_target_x = -1.0
 
             node_features_for_crane[i, 0] = crane_current_x / 44
             if not crane_target_x == -1:
