@@ -271,7 +271,6 @@ def generate_data(rows=("A", "B"),  # row 이름
                   storage=True,  # 적치 계획 데이터를 생성할 지 여부
                   reshuffle=True,  # 선별 계획 데이터를 생성할 지 여부
                   retrieval=True,  # 출고 계획 데이터를 생성할 지 여부
-                  n_bays_in_area0=1, # 0번 영역 내 bay의 수
                   n_bays_in_area1=15,  # 1번 영역 내 bay의 수
                   n_bays_in_area2=6,  # 2번 영역 내 bay의 수
                   n_bays_in_area3=3,  # 3번 영역 내 bay의 수
@@ -301,11 +300,9 @@ def generate_data(rows=("A", "B"),  # row 이름
 
     piles_in_area0 = []
     for row_id in rows:
-        for col_id in range(0, n_bays_in_area0):
-            # pile = "I" + row_id + str(col_id).rjust(2, '0')
-            pile = row_id + str(col_id).rjust(2, '0')
-            piles_in_area0.append(pile)
-            mapping_from_pile_to_x[pile] = col_id
+        pile = row_id + "00"
+        piles_in_area0.append(pile)
+        mapping_from_pile_to_x[pile] = 1
 
     piles_in_area1, piles_in_area2, piles_in_area3, piles_in_area4, piles_in_area5, piles_in_area6 = [], [], [], [], [], []
     n_bays_cum = np.cumsum([n_bays_in_area1, n_bays_in_area2, n_bays_in_area3, n_bays_in_area4, n_bays_in_area5, n_bays_in_area6])
@@ -314,27 +311,26 @@ def generate_data(rows=("A", "B"),  # row 이름
             pile = row_id + str(col_id).rjust(2, '0')
             if col_id <= n_bays_cum[0]:
                 piles_in_area1.append(pile)
-                mapping_from_pile_to_x[pile] = n_bays_in_area0 + col_id
+                mapping_from_pile_to_x[pile] = col_id + 1
             elif n_bays_cum[0] < col_id <= n_bays_cum[1]:
                 piles_in_area2.append(pile)
-                mapping_from_pile_to_x[pile] = n_bays_in_area0 + col_id
+                mapping_from_pile_to_x[pile] = col_id + 1
             elif n_bays_cum[1] < col_id <= n_bays_cum[2]:
                 piles_in_area3.append(pile)
-                mapping_from_pile_to_x[pile] = n_bays_in_area0 + col_id + 1
+                mapping_from_pile_to_x[pile] = col_id + 2
             elif n_bays_cum[2] < col_id <= n_bays_cum[3]:
                 piles_in_area4.append(pile)
-                mapping_from_pile_to_x[pile] = n_bays_in_area0 + col_id + 2
+                mapping_from_pile_to_x[pile] = col_id + 3
             elif n_bays_cum[3] < col_id <= n_bays_cum[4]:
                 piles_in_area5.append(pile)
-                mapping_from_pile_to_x[pile] = n_bays_in_area0 + col_id + 2
+                mapping_from_pile_to_x[pile] = col_id + 3
             else:
                 piles_in_area6.append(pile)
-                mapping_from_pile_to_x[pile] = n_bays_in_area0 + col_id + 2
+                mapping_from_pile_to_x[pile] = col_id + 3
 
     piles_all = piles_in_area0 + piles_in_area1 + piles_in_area2 \
                 + piles_in_area3 + piles_in_area4 + piles_in_area5 + piles_in_area6
     x_max = max(mapping_from_pile_to_x.values()) + 1
-
 
     # 출고 계획 생성
     if retrieval:
@@ -376,8 +372,8 @@ def generate_data(rows=("A", "B"),  # row 이름
             x = mapping_from_pile_to_x[pile]
             if x < 1 + safety_margin:
                 to_piles_reshuffle_rev = [i for i in to_piles_reshuffle
-                                          if mapping_from_pile_to_x[i] <= x_max + 1 - safety_margin]
-            elif x > x_max + 1 - safety_margin:
+                                          if mapping_from_pile_to_x[i] <= x_max - safety_margin]
+            elif x > x_max - safety_margin:
                 to_piles_reshuffle_rev = [i for i in to_piles_reshuffle
                                           if mapping_from_pile_to_x[i] >= 1 + safety_margin]
             else:
@@ -398,7 +394,7 @@ def generate_data(rows=("A", "B"),  # row 이름
         from_piles_storage = random.sample(piles_in_area0, n_from_piles_storage)
         candidates = piles_in_area1 + piles_in_area5
         candidates = [i for i in candidates if i not in from_piles_reshuffle]
-        candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max + 1 - safety_margin]
+        candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max - safety_margin]
         to_piles_storage = random.sample(candidates, n_to_piles_storage)
         # to_piles_storage = ["A22", "A23", "A24", "B22", "B23", "B24"]
 
@@ -429,7 +425,6 @@ if __name__ == '__main__':
     reshuffle = True
     retrieval = True
 
-    n_bays_in_area0 = 1
     n_bays_in_area1 = 15
     n_bays_in_area2 = 6
     n_bays_in_area3 = 3
@@ -450,7 +445,7 @@ if __name__ == '__main__':
     n_plates_for_retrieval = 150
 
     safety_margin = 5
-    file_dir = "../input/data/case_study/case2/case2-4/case2-4-1/"
+    file_dir = "../input/data/case_study/case2/case2-3/case2-3-3/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
@@ -463,7 +458,6 @@ if __name__ == '__main__':
                             storage=storage,
                             reshuffle=reshuffle,
                             retrieval=retrieval,
-                            n_bays_in_area0=n_bays_in_area0,
                             n_bays_in_area1=n_bays_in_area1,
                             n_bays_in_area2=n_bays_in_area2,
                             n_bays_in_area3=n_bays_in_area3,
