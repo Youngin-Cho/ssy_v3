@@ -9,11 +9,17 @@ from environment.simulation import Management
 
 
 class SteelStockYard:
-    def __init__(self, data_src, look_ahead=2, rows=("A", "B"), working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
+    def __init__(self, data_src, look_ahead=2, max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
+                 input_points=(1,), output_points=(23, 27, 44), working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
 
         self.data_src = data_src
         self.look_ahead = look_ahead
-        self.rows = rows
+        self.max_x = max_x
+        self.max_y = max_y
+        self.row_range = row_range
+        self.bay_range = bay_range
+        self.input_points = input_points
+        self.output_points = output_points
         self.working_crane_ids = working_crane_ids
         self.safety_margin = safety_margin
 
@@ -35,7 +41,9 @@ class SteelStockYard:
         self.crane_list = ["Crane-1", "Crane-2"]
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
-                                rows=self.rows, working_crane_ids=working_crane_ids, safety_margin=safety_margin)
+                                max_x=self.max_x, max_y=self.max_y, row_range=self.row_range, bay_range=self.bay_range,
+                                input_points=self.input_points, output_points=self.output_points,
+                                working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
 
         self.action_mapping = {i + 1: pile_name for i, pile_name in enumerate(self.model.piles.keys())}
         self.action_mapping_inverse = {y: x for x, y in self.action_mapping.items()}
@@ -73,8 +81,9 @@ class SteelStockYard:
 
     def reset(self):
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
-                                rows=self.rows, working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
-
+                                max_x=self.max_x, max_y=self.max_y, row_range=self.row_range, bay_range=self.bay_range,
+                                input_points=self.input_points, output_points=self.output_points,
+                                working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
         while True:
             if self.model.decision_time:
                 break

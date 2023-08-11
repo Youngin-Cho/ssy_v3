@@ -5,7 +5,7 @@ import pandas as pd
 from history.cfg import get_cfg
 from torch.utils.tensorboard import SummaryWriter
 from agent.iqn import *
-from environment.multi_process import *
+from history.multi_process import *
 
 
 def evaluate(validation_dir):

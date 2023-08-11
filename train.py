@@ -12,13 +12,15 @@ from environment.data import DataGenerator
 from environment.env import SteelStockYard
 
 
-def evaluate(validation_dir, look_ahead, rows, working_crane_ids, safety_margin):
+def evaluate(validation_dir):
     validation_path = os.listdir(validation_dir)
     makespans = []
 
     for path in validation_path:
         data_src = validation_dir + path
-        test_env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
+        test_env = SteelStockYard(data_src, look_ahead=look_ahead,
+                                  max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
+                                  input_points=input_points, output_points=output_points,
                                   working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
         state, info = test_env.reset()
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     cfg = get_cfg()
     vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
-    rows = tuple(i for i in string.ascii_uppercase[:cfg.n_rows])
+    n_rows = cfg.n_rows
     storage = cfg.storage
     reshuffle = cfg.reshuffle
     retrieval = cfg.retrieval
@@ -65,6 +67,15 @@ if __name__ == "__main__":
     n_plates_storage = cfg.n_plates_storage
     n_plates_reshuffle = cfg.n_plates_reshuffle
     n_plates_retrieval = cfg.n_plates_retrieval
+
+    max_x = n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6
+    max_y = cfg.n_rows
+    row_range = (string.ascii_uppercase[0], string.ascii_uppercase[cfg.n_rows - 1])
+    bay_range = (1, n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6)
+    input_points = (1,)
+    output_points = (n_bays_in_area1 + n_bays_in_area2,
+                     n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3,
+                     n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6)
     working_crane_ids = tuple()
     if cfg.is_crane1_working:
         working_crane_ids = working_crane_ids + ("Crane-1", )
@@ -101,7 +112,7 @@ if __name__ == "__main__":
 
     validation_dir = './input/data/validation/'
 
-    data_src = DataGenerator(rows=rows,
+    data_src = DataGenerator(n_rows=n_rows,
                              storage=storage,
                              reshuffle=reshuffle,
                              retrieval=retrieval,
@@ -123,7 +134,9 @@ if __name__ == "__main__":
                              n_plates_retrieval=n_plates_retrieval,
                              working_crane_ids=working_crane_ids,
                              safety_margin=safety_margin)
-    env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
+    env = SteelStockYard(data_src, look_ahead=look_ahead,
+                         max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
+                         input_points=input_points, output_points=output_points,
                          working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
     agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead, n_units,
@@ -180,7 +193,7 @@ if __name__ == "__main__":
                 break
 
         if episode % eval_every == 0 or episode == 1:
-            makespan = evaluate(validation_dir, look_ahead, rows, working_crane_ids, safety_margin)
+            makespan = evaluate(validation_dir)
             vessl.log(payload={"Makespan": makespan}, step=episode)
             # writer.add_scalar("Validation/Makespan", makespan, episode)
             with open(log_dir + "validation_log.csv", 'a') as f:
@@ -190,7 +203,9 @@ if __name__ == "__main__":
             agent.save(episode, model_dir)
 
         if episode % 20 == 0:
-            env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
+            env = SteelStockYard(data_src, look_ahead=look_ahead,
+                                 max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
+                                 input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
         agent.scheduler.step()

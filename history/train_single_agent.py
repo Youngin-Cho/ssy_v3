@@ -4,7 +4,7 @@ import pandas as pd
 
 from cfg_train import get_cfg
 from agent.iqn import *
-from environment.multi_process import *
+from history.multi_process import *
 
 
 def evaluate(validation_dir):

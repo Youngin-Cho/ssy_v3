@@ -202,12 +202,19 @@ class Monitor:
 
 class Management:
     def __init__(self, df_storage, df_reshuffle, df_retrieval,
-                 rows=("A", "B"), working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
+                 max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
+                 input_points=(1,), output_points=(23, 27, 44),
+                 working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
         self.df_storage = df_storage
         self.df_reshuffle = df_reshuffle
         self.df_retrieval = df_retrieval
+        self.max_x = max_x
+        self.max_y = max_y
         self.working_crane_ids = working_crane_ids
-        self.rows = rows
+        self.row_range = row_range
+        self.bay_range = bay_range
+        self.input_points = input_points
+        self.output_points = output_points
         self.safety_margin = safety_margin
 
         self.multi_weight = 20.0
@@ -228,11 +235,6 @@ class Management:
                                          "Avoiding Time Cumulative": 0.0,
                                          "Waiting Time Cumulative": 0.0} for crane in self.cranes.items}
 
-        # self.reward_info = {crane.name: {"Wasting Time_Crane-1": 0.0,
-        #                                  "Wasting Time_Crane-2": 0.0,
-        #                                  "Wasting Time Cumulative_Crane-1": 0.0,
-        #                                  "Wasting Time Cumulative_Crane-2": 0.0} for crane in self.cranes.items}
-
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()}  # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
             self.location_mapping[tuple(conveyor.coord + [1])] = conveyor
@@ -251,13 +253,15 @@ class Management:
     def _modeling(self):
         env = simpy.Environment()
 
-        pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in self.rows for col_id in range(0, 41)]
+        row_list = [chr(i) for i in range(ord(self.row_range[0]), ord(self.row_range[1]) + 1)]
+        bay_list = [i for i in range(self.bay_range[0] - 1, self.bay_range[1] + 1)]
+        pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in row_list for col_id in bay_list]
         piles = OrderedDict({name: Pile(name, get_coord(name)) for name in pile_list})
 
         conveyors = OrderedDict()
-        conveyors['cn1'] = Conveyor('cn1', 23, 0.01)
-        conveyors['cn2'] = Conveyor('cn2', 27, 0.01)
-        conveyors['cn3'] = Conveyor('cn3', 44, 0.0005)
+        conveyors['cn1'] = Conveyor('cn1', self.output_points[0], 0.01)
+        conveyors['cn2'] = Conveyor('cn2', self.output_points[1], 0.01)
+        conveyors['cn3'] = Conveyor('cn3', self.output_points[2], 0.0005)
 
         # 적치 작업 대상 강재 데이터
         self.df_storage = self.df_storage.sort_values(by=["pileno", "pileseq"])
@@ -280,7 +284,7 @@ class Management:
         cranes = PriorityFilterStore(env)
 
         crane1 = Crane(env, 'Crane-1', self.safety_margin, 8.0, (2, 1))
-        crane2 = Crane(env, 'Crane-2', self.safety_margin, 8.0, (43, 1))
+        crane2 = Crane(env, 'Crane-2', self.safety_margin, 8.0, (self.max_x - 1, 1))
 
         crane1.opposite = crane2
         crane2.opposite = crane1
@@ -351,16 +355,17 @@ class Management:
         for action in self.action_conveyor:
             action.interrupt()
 
-    def multi_loading(self, action, crane_name):
+    def multi_loading(self, action, crane):
         possible_dict = dict()
         possible_dict[action] = 1
         for i in range(self.multi_dist):
-            target_coord = (int(self.piles[action].coord[0] - i), int(self.piles[action].coord[1]))
-            if target_coord in self.location_mapping.keys():
-                possible_dict[self.location_mapping[target_coord].name] = 1
-            target_coord = (int(self.piles[action].coord[0] + i), int(self.piles[action].coord[1]))
-            if target_coord in self.location_mapping.keys():
-                possible_dict[self.location_mapping[target_coord].name] = 1
+            for dx in [-i, i]:
+                target_coord = (int(self.piles[action].coord[0] + dx), int(self.piles[action].coord[1]))
+                if target_coord in self.location_mapping.keys():
+                    if ((crane.name == "Crane-1" and target_coord[0] <= self.max_x - self.safety_margin) or
+                            (crane.name == "Crane-2" and target_coord[0] >= 1 + self.safety_margin)):
+                        possible_dict[self.location_mapping[target_coord].name] = 1
+
         from_list = [action]
         weight = self.piles[action].plates[-possible_dict[action]].w
         current_to_pile = self.piles[action].plates[-possible_dict[action]].to_pile
@@ -376,9 +381,11 @@ class Management:
                         same_to_pile.append(pile)
                     if not self.piles[pile].plates[-possible_dict[pile]].to_pile in ["cn1", "cn2", "cn3"]:
                         target_coord = self.piles[self.piles[pile].plates[-possible_dict[pile]].to_pile].coord
-                        if abs(target_coord[0] -self.piles[current_to_pile].coord[0]) <= self.multi_dist:
-                            if weight + self.piles[pile].plates[-possible_dict[pile]].w <= self.multi_weight:
-                                possible_action.append(pile)
+                        if ((crane.name == "Crane-1" and target_coord[0] <= self.max_x - self.safety_margin) or
+                                (crane.name == "Crane-2" and target_coord[0] >= 1 + self.safety_margin)):
+                            if abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist:
+                                if weight + self.piles[pile].plates[-possible_dict[pile]].w <= self.multi_weight:
+                                    possible_action.append(pile)
             if action in same_to_pile:
                 same_to_pile.remove(action)
             if action in possible_action:
@@ -388,9 +395,11 @@ class Management:
                     same_to_pile.append(action)
                 if not self.piles[action].plates[-possible_dict[action] - 1].to_pile in ["cn1", "cn2", "cn3"]:
                     target_coord = self.piles[self.piles[action].plates[-possible_dict[action] - 1].to_pile].coord
-                    if abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist:
-                        if weight + self.piles[action].plates[-possible_dict[action] - 1].w <= self.multi_weight:
-                            possible_action.append(action)
+                    if ((crane.name == "Crane-1" and target_coord[0] <= self.max_x - self.safety_margin) or
+                            (crane.name == "Crane-2" and target_coord[0] >= 1 + self.safety_margin)):
+                        if abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist:
+                            if weight + self.piles[action].plates[-possible_dict[action] - 1].w <= self.multi_weight:
+                                possible_action.append(action)
 
             intersection = list(set(same_to_pile) & set(possible_action))
             if len(intersection) != 0:
@@ -443,7 +452,7 @@ class Management:
             else:
                 tag = "Reshuflle"
 
-            from_list = self.multi_loading(action, crane_name=crane.name)
+            from_list = self.multi_loading(action, crane)
 
             for pile in from_list:
                 from_pile = self.piles[pile]
