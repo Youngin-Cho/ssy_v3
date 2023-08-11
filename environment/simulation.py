@@ -351,7 +351,7 @@ class Management:
         for action in self.action_conveyor:
             action.interrupt()
 
-    def multi_loading(self, action):
+    def multi_loading(self, action, crane_name):
         possible_dict = dict()
         possible_dict[action] = 1
         for i in range(self.multi_dist):
@@ -410,6 +410,8 @@ class Management:
             num += 1
 
         for pile in from_list:
+            if pile not in self.move_list:
+                print(pile)
             self.move_list.remove(pile)
 
         return from_list
@@ -441,10 +443,7 @@ class Management:
             else:
                 tag = "Reshuflle"
 
-            if self.piles[action].plates[-1].to_pile in ["cn1", "cn2", "cn3"]:
-                from_list = [action]
-            else:
-                from_list = self.multi_loading(action)
+            from_list = self.multi_loading(action, crane_name=crane.name)
 
             for pile in from_list:
                 from_pile = self.piles[pile]
