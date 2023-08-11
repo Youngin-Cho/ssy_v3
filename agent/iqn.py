@@ -18,8 +18,7 @@ class PrioritizedReplay(object):
     Proportional Prioritization
     """
 
-    def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_steps=10000,
-                 num_agents=2):
+    def __init__(self, capacity, batch_size, gamma=0.99, n_step=1, alpha=0.6, beta_start=0.4, beta_steps=10000):
         self.capacity = capacity
         self.batch_size = batch_size
         self.gamma = gamma
@@ -27,13 +26,12 @@ class PrioritizedReplay(object):
         self.alpha = alpha
         self.beta_start = beta_start
         self.beta_steps = beta_steps
-        self.num_agents = num_agents
 
         self.frame = 1  # for beta calculation
         self.buffer = []
         self.pos = 0
         self.priorities = np.zeros((capacity,), dtype=np.float32)
-        self.n_step_buffer = [deque(maxlen=self.n_step) for i in range(num_agents)]
+        self.n_step_buffer = deque(maxlen=self.n_step)
 
     def calc_multistep_return(self, n_step_buffer):
         Return = 0
@@ -45,16 +43,11 @@ class PrioritizedReplay(object):
     def beta_by_frame(self, frame_idx):
         return min(1.0, self.beta_start + frame_idx * (1.0 - self.beta_start) / self.beta_steps)
 
-    def add(self, state, action, reward, next_state, done, crane_id=None):
+    def add(self, state, action, reward, next_state, done):
         # n_step calc
-        if crane_id is None:
-            self.n_step_buffer[0].append((state, action, reward, next_state, done))
-            if len(self.n_step_buffer[0]) == self.n_step:
-                state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[0])
-        else:
-            self.n_step_buffer[int(crane_id)].append((state, action, reward, next_state, done))
-            if len(self.n_step_buffer[crane_id]) == self.n_step:
-                state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer[crane_id])
+        self.n_step_buffer.append((state, action, reward, next_state, done))
+        if len(self.n_step_buffer) == self.n_step:
+            state, action, reward, next_state, done = self.calc_multistep_return(self.n_step_buffer)
 
         max_prio = self.priorities.max() if self.buffer else 1.0  # gives max priority if buffer is not empty else 1
 
@@ -102,10 +95,9 @@ class PrioritizedReplay(object):
 
 
 class Agent():
-    def __init__(self, state_size, action_size, meta_data, look_ahead=2,
-                 capacity=1000, alpha=0.6, beta_start=0.4, beta_steps=100000,
-                 n_units=256, n_step=3, batch_size=64, base_lr=0.0000001, max_lr=0.0001, step_size_up=2500, step_size_down=2500,
-                 tau=0.001, gamma=0.9, N=8, num_agents=1):
+    def __init__(self, state_size, action_size, meta_data, look_ahead=2, n_units=256,
+                 capacity=1000, alpha=0.6, beta_start=0.4, beta_steps=100000, n_step=3, batch_size=64,
+                 lr=0.0000001, lr_step=2000, lr_decay=0.9, tau=0.001, gamma=0.9, N=8):
         self.state_size = state_size
         self.action_size = action_size
         self.tau = tau
@@ -124,18 +116,16 @@ class Agent():
         self.qnetwork_target = Network(state_size, action_size, meta_data, look_ahead, n_units, N).to(device)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
-        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=base_lr)
-        # self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
-        self.scheduler = CyclicLR(optimizer=self.optimizer, base_lr=base_lr, max_lr=max_lr,
-                                  step_size_up=step_size_up, step_size_down=step_size_down, mode="triangular2", cycle_momentum=False)
+        self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)
+        self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
 
         # Replay memory
         self.memory = PrioritizedReplay(capacity, self.batch_size, gamma=self.gamma, n_step=n_step,
-                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps, num_agents=num_agents)
+                                        alpha=alpha, beta_start=beta_start, beta_steps=beta_steps)
 
-    def step(self, state, action, reward, next_state, done, crane_id=None):
+    def step(self, state, action, reward, next_state, done):
         # Save experience in replay memory
-        self.memory.add(state, action, reward, next_state, done, crane_id)
+        self.memory.add(state, action, reward, next_state, done)
 
         loss = None
         # If enough samples are available in memory, get random subset and learn

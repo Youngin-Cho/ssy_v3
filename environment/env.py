@@ -1,64 +1,45 @@
 import torch
 import random
 import numpy as np
+import pandas as pd
 
 from torch_geometric.data import HeteroData, Data
-from environment.data import generate_data
 from environment.simulation import Management
-from utilities import get_location_id
 
 
-class SteelStockYard(object):
-    def __init__(self, look_ahead=2,  # 상태 구성 시 각 파일에서 포함할 강재의 수
-                 bays=("A", "B"),  # 강재적치장의 베이 이름
-                 working_crane_ids=("Crane-1", "Crane-2"),
-                 safety_margin=5,
-                 num_of_storage_to_piles=10,  # 적치 작업 시 강재를 적치할 파일의 수 (데이터 랜덤 생성 시)
-                 num_of_reshuffle_from_piles=10,  # 선별 작업 시 이동할 강재가 적치된 파일의 수 (데이터 랜덤 생성 시)
-                 num_of_reshuffle_to_piles=20,  # 선별 작업 시 강재가 이동할 파일의 수 (데이터 랜덤 생성 시)
-                 num_of_retrieval_from_piles=4,  # 출고 작업 시 이동할 강재가 적치된 파일의 수 (데이터 랜덤 생성 시)
-                 df_storage=None,
-                 df_reshuffle=None,
-                 df_retrieval=None):
+class SteelStockYard:
+    def __init__(self, data_src, look_ahead=2, rows=("A", "B"), working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
 
+        self.data_src = data_src
         self.look_ahead = look_ahead
-        self.bays = bays
+        self.rows = rows
         self.working_crane_ids = working_crane_ids
         self.safety_margin = safety_margin
-        self.num_of_storage_to_piles = num_of_storage_to_piles
-        self.num_of_reshuffle_from_piles = num_of_reshuffle_from_piles
-        self.num_of_reshuffle_to_piles = num_of_reshuffle_to_piles
-        self.num_of_retrieval_from_piles = num_of_retrieval_from_piles
+
+        if type(self.data_src) is DataGenerator:
+            self.df_storage, self.df_reshuffle, self.df_retrieval = self.data_src.generate()
+        else:
+            self.df_storage = pd.read_excel(self.data_src, sheet_name="storage", engine="openpyxl")
+            self.df_reshuffle = pd.read_excel(self.data_src, sheet_name="reshuffle", engine="openpyxl")
+            self.df_retrieval = pd.read_excel(self.data_src, sheet_name="retrieval", engine="openpyxl")
 
         self.action_size = 2 * 40 + 2 + 1
-        self.state_size = {"crane": 2, "plate": 2}
-        self.meta_data = (["crane", "plate"],
+        self.state_size = {"crane": 2, "pile": 6}
+        self.meta_data = (["crane", "pile"],
                           [("crane", "interfering", "crane"),
-                           ("plate", "moving_rev", "crane"),
-                           ("crane", "moving", "plate"),
-                           ("plate", "stacking", "plate")])
+                           ("pile", "moving_rev", "crane"),
+                           ("crane", "moving", "pile"),
+                           ("pile", "stacking", "pile")])
 
-        if (df_storage is None) and (df_reshuffle is None) and (df_retrieval is None):
-            self.random_data = True
-            self.df_storage, self.df_reshuffle, self.df_retrieval = generate_data(self.num_of_storage_to_piles,
-                                                                                  self.num_of_reshuffle_from_piles,
-                                                                                  self.num_of_reshuffle_to_piles,
-                                                                                  self.num_of_retrieval_from_piles,
-                                                                                  self.bays)
-        else:
-            self.random_data = False
-            self.df_storage, self.df_reshuffle, self.df_retrieval = df_storage, df_reshuffle, df_retrieval
-
-        self.num_of_cranes = 2
+        self.crane_list = ["Crane-1", "Crane-2"]
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
-                                bays=self.bays, working_crane_ids=working_crane_ids, safety_margin=self.safety_margin)
+                                rows=self.rows, working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
         self.action_mapping = {i + 1: pile_name for i, pile_name in enumerate(self.model.piles.keys())}
         self.action_mapping_inverse = {y: x for x, y in self.action_mapping.items()}
         self.crane_in_decision = None
         self.time = 0.0
-        self.safety_margin = safety_margin
 
     def step(self, action):
         done = False
@@ -90,17 +71,8 @@ class SteelStockYard(object):
         return next_state, reward, done, info
 
     def reset(self):
-        if self.random_data:
-            self.df_storage, self.df_reshuffle, self.df_retrieval = generate_data(self.num_of_storage_to_piles,
-                                                                                  self.num_of_reshuffle_from_piles,
-                                                                                  self.num_of_reshuffle_to_piles,
-                                                                                  self.num_of_retrieval_from_piles,
-                                                                                  self.bays)
-
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
-                                bays=self.bays, working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
-        self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
-        self.crane_list = [crane.name for crane in self.model.cranes.items]
+                                rows=self.rows, working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
 
         while True:
             if self.model.decision_time:
@@ -225,14 +197,14 @@ class SteelStockYard(object):
     def _get_state(self):
         state = HeteroData()
 
-        num_of_node_for_crane = self.num_of_cranes
-        num_of_node_for_plate = len(self.pile_list)
-        num_of_edge_for_plate_plate = len(self.pile_list) * (len(self.pile_list) - 1)
-        num_of_edge_for_crane_plate = len(self.pile_list) * self.num_of_cranes
-        num_of_edge_for_plate_crane = len(self.pile_list) * self.num_of_cranes
+        num_of_node_for_crane = len(self.crane_list)
+        num_of_node_for_pile = len(self.pile_list)
+        num_of_edge_for_pile_pile = len(self.pile_list) * (len(self.pile_list) - 1)
+        num_of_edge_for_crane_pile = len(self.pile_list) * len(self.crane_list)
+        num_of_edge_for_pile_crane = len(self.pile_list) * len(self.crane_list)
         num_of_edge_for_crane_crane = len(self.crane_list) * (len(self.crane_list) - 1)
 
-        node_features_for_plate = np.zeros((num_of_node_for_plate, self.state_size["plate"]))
+        node_features_for_pile = np.zeros((num_of_node_for_pile, self.state_size["pile"]))
         node_features_for_crane = np.zeros((num_of_node_for_crane, self.state_size["crane"]))
 
         for i, crane_name in enumerate(self.crane_list):
@@ -253,41 +225,46 @@ class SteelStockYard(object):
 
         for i, from_pile_name in enumerate(self.pile_list):
             from_pile_x = self.model.piles[from_pile_name].coord[0]
-            node_features_for_plate[i, 0] = from_pile_x / 44
-
             plates = self.model.piles[from_pile_name].plates
-            if len(plates) >= 1:
-                to_pile_name = self.model.piles[from_pile_name].plates[-1].to_pile
-                to_pile_x = self.model.piles[to_pile_name].coord[0]
-                node_features_for_plate[i, 1] = to_pile_x / 44
+
+            for j in range(self.look_ahead):
+                node_features_for_pile[i, 3 * j] = from_pile_x / 44
+
+                if len(plates) >= j + 1:
+                    plate = self.model.piles[from_pile_name].plates[-1-j]
+                    to_pile_name = plate.to_pile
+                    to_pile_x = self.model.piles[to_pile_name].coord[0]
+                    weight = plate.weight
+                    node_features_for_pile[i, 3 * j + 1] = to_pile_x / 44
+                    node_features_for_pile[i, 3 * j + 2] = weight / 19.294
 
         state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32)
-        state['plate'].x = torch.tensor(node_features_for_plate, dtype=torch.float32)
+        state['pile'].x = torch.tensor(node_features_for_pile, dtype=torch.float32)
 
-        edge_plate_plate = np.zeros((2, num_of_edge_for_plate_plate))
-        edge_crane_plate = np.zeros((2, num_of_edge_for_crane_plate))
-        edge_plate_crane = np.zeros((2, num_of_edge_for_plate_crane))
+        edge_pile_pile = np.zeros((2, num_of_edge_for_pile_pile))
+        edge_crane_pile = np.zeros((2, num_of_edge_for_crane_pile))
+        edge_pile_crane = np.zeros((2, num_of_edge_for_pile_crane))
         edge_crane_crane = np.zeros((2, num_of_edge_for_crane_crane))
 
         for i, from_pile_name in enumerate(self.pile_list):
-            edge_plate_plate[0, i * (len(self.pile_list) - 1):(i + 1) * (len(self.pile_list) - 1)] = i
-            edge_plate_plate[1, i * (len(self.pile_list) - 1):(i + 1) * (len(self.pile_list) - 1)] \
+            edge_pile_pile[0, i * (len(self.pile_list) - 1):(i + 1) * (len(self.pile_list) - 1)] = i
+            edge_pile_pile[1, i * (len(self.pile_list) - 1):(i + 1) * (len(self.pile_list) - 1)] \
                 = [j for j in range(len(self.pile_list)) if j != i]
 
         for i, crane_name in enumerate(self.crane_list):
-            edge_crane_plate[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
-            edge_crane_plate[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
+            edge_crane_pile[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
+            edge_crane_pile[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
 
-            edge_plate_crane[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
-            edge_plate_crane[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
+            edge_pile_crane[0, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = range(len(self.pile_list))
+            edge_pile_crane[1, i * len(self.pile_list):(i + 1) * len(self.pile_list)] = i
 
             edge_crane_crane[0, i * (len(self.crane_list) - 1):(i + 1) * (len(self.crane_list) - 1)] = i
             edge_crane_crane[1, i * (len(self.crane_list) - 1):(i + 1) * (len(self.crane_list) - 1)] \
                 = [j for j in range(len(self.crane_list)) if j != i]
 
-        state['plate', 'stacking', 'plate'].edge_index = torch.tensor(edge_plate_plate, dtype=torch.long)
-        state['crane', 'moving', 'plate'].edge_index = torch.tensor(edge_crane_plate, dtype=torch.long)
-        state['plate', 'moving_rev', 'crane'].edge_index = torch.tensor(edge_plate_crane, dtype=torch.long)
+        state['pile', 'stacking', 'pile'].edge_index = torch.tensor(edge_pile_pile, dtype=torch.long)
+        state['crane', 'moving', 'pile'].edge_index = torch.tensor(edge_crane_pile, dtype=torch.long)
+        state['pile', 'moving_rev', 'crane'].edge_index = torch.tensor(edge_pile_crane, dtype=torch.long)
         state['crane', 'interfering', 'crane'].edge_index = torch.tensor(edge_crane_crane, dtype=torch.long)
 
         return state

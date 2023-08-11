@@ -1,25 +1,23 @@
 import os
 import vessl
 import torch
+import string
 import numpy as np
 import pandas as pd
 
 from cfg_train import get_cfg
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from agent.iqn import Agent
+from environment.data import DataGenerator
 from environment.env import SteelStockYard
 
 
-def evaluate(validation_dir):
+def evaluate(validation_dir, look_ahead, rows, working_crane_ids, safety_margin):
     validation_path = os.listdir(validation_dir)
     makespans = []
 
     for path in validation_path:
-        df_storage = pd.read_excel(validation_dir + path, sheet_name="storage", engine="openpyxl")
-        df_reshuffle = pd.read_excel(validation_dir + path, sheet_name="reshuffle", engine="openpyxl")
-        df_retrieval = pd.read_excel(validation_dir + path, sheet_name="retrieval", engine="openpyxl")
-        test_env = SteelStockYard(look_ahead=look_ahead, df_storage=df_storage,
-                                  df_reshuffle=df_reshuffle, df_retrieval=df_retrieval)
+        test_env = SteelStockYard(path, look_ahead=look_ahead, rows=rows, working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
         state, info = test_env.reset()
         crane_in_decision = info["crane_id"]
@@ -45,16 +43,38 @@ if __name__ == "__main__":
     cfg = get_cfg()
     vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
+    rows = tuple(i for i in string.ascii_uppercase[:cfg.n_rows])
+    storage = cfg.storage
+    reshuffle = cfg.reshuffle
+    retrieval = cfg.retrieval
+    n_bays_in_area1 = cfg.n_bays_in_area1
+    n_bays_in_area2 = cfg.n_bays_in_area2
+    n_bays_in_area3 = cfg.n_bays_in_area3
+    n_bays_in_area4 = cfg.n_bays_in_area4
+    n_bays_in_area5 = cfg.n_bays_in_area5
+    n_bays_in_area6 = cfg.n_bays_in_area6
+    n_from_piles_storage = cfg.n_from_piles_storage
+    n_to_piles_storage = cfg.n_to_piles_storage
+    n_from_piles_reshuffle = cfg.n_from_piles_reshuffle
+    n_to_piles_reshuffle = cfg.n_to_piles_reshuffle
+    n_from_piles_retrieval_cn1 = cfg.n_from_piles_retrieval_cn1
+    n_from_piles_retrieval_cn2 = cfg.n_from_piles_retrieval_cn2
+    n_from_piles_retrieval_cn3 = cfg.n_from_piles_retrieval_cn3
+    n_plates_storage = cfg.n_plates_storage
+    n_plates_reshuffle = cfg.n_plates_reshuffle
+    n_plates_retrieval = cfg.n_plates_retrieval
+    working_crane_ids = tuple()
+    if cfg.is_crane1_working:
+        working_crane_ids = working_crane_ids + ("Crane-1", )
+    if cfg.is_crane2_working:
+        working_crane_ids = working_crane_ids + ("Crane-2", )
+    safety_margin = cfg.safety_margin
+
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
     save_every = cfg.save_every
 
     look_ahead = cfg.look_ahead
-    n_stor_to = cfg.n_stor_to
-    n_resh_from = cfg.n_resh_from
-    n_resh_to = cfg.n_resh_to
-    n_retr_from = cfg.n_retr_from
-
     n_units = cfg.n_units
     n_step = cfg.n_step
     capacity = cfg.capacity
@@ -63,16 +83,11 @@ if __name__ == "__main__":
     beta_steps = cfg.beta_steps
     batch_size = cfg.batch_size
     N = cfg.N
-    # lr = cfg.lr
-    # lr_step = cfg.lr_step
-    # lr_decay = cfg.lr_decay
-    base_lr = cfg.base_lr
-    max_lr = cfg.max_lr
-    step_size_up = cfg.step_size_up
-    step_size_down = cfg.step_size_down
+    lr = cfg.lr
+    lr_step = cfg.lr_step
+    lr_decay = cfg.lr_decay
     gamma = cfg.gamma
     tau = cfg.tau
-    worker = cfg.worker
 
     model_dir = '/output/train/model/'
     if not os.path.exists(model_dir):
@@ -82,15 +97,36 @@ if __name__ == "__main__":
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    validation_dir = './input/validation/{0}-{1}-{2}-{3}/'.format(n_stor_to, n_resh_from, n_resh_to, n_retr_from)
+    validation_dir = './input/data/validation/'
 
-    env = SteelStockYard(look_ahead=look_ahead,
-                         num_of_storage_to_piles=n_stor_to, num_of_reshuffle_from_piles=n_resh_from,
-                         num_of_reshuffle_to_piles=n_resh_to, num_of_retrieval_from_piles=n_retr_from)
+    data_src = DataGenerator(rows=rows,
+                             storage=storage,
+                             reshuffle=reshuffle,
+                             retrieval=retrieval,
+                             n_bays_in_area1=n_bays_in_area1,
+                             n_bays_in_area2=n_bays_in_area2,
+                             n_bays_in_area3=n_bays_in_area3,
+                             n_bays_in_area4=n_bays_in_area4,
+                             n_bays_in_area5=n_bays_in_area5,
+                             n_bays_in_area6=n_bays_in_area6,
+                             n_from_piles_storage=n_from_piles_storage,
+                             n_to_piles_storage=n_to_piles_storage,
+                             n_from_piles_reshuffle=n_from_piles_reshuffle,
+                             n_to_piles_reshuffle=n_to_piles_reshuffle,
+                             n_from_piles_retrieval_cn1=n_from_piles_retrieval_cn1,
+                             n_from_piles_retrieval_cn2=n_from_piles_retrieval_cn2,
+                             n_from_piles_retrieval_cn3=n_from_piles_retrieval_cn3,
+                             n_plates_storage = n_plates_storage,
+                             n_plates_reshuffle = n_plates_reshuffle,
+                             n_plates_retrieval = n_plates_retrieval,
+                             working_crane_ids=working_crane_ids,
+                             safety_margin=safety_margin)
+    env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
+                         working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
-    agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead,
+    agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead, n_units,
                   capacity, alpha, beta_start, beta_steps,
-                  n_units, n_step, batch_size, base_lr, max_lr, step_size_up, step_size_down, tau, gamma, N, worker)
+                  n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N)
     # writer = SummaryWriter(log_dir)
 
     if cfg.load_model:
@@ -110,11 +146,8 @@ if __name__ == "__main__":
     for episode in range(start_episode, n_episode + 1):
         reward_tot = 0.0
         done = False
-
-        # sample_crane1 = []
-        # sample_crane2 = []
-
         loss_list = []
+
         state, info = env.reset()
         crane_in_decision = info["crane_id"]
 
@@ -122,24 +155,6 @@ if __name__ == "__main__":
             possible_actions = env.get_possible_actions()
             action = agent.get_action([state], [possible_actions], eps=0.0, noisy=True, crane_id=crane_in_decision)
             next_state, reward, done, info = env.step(action[0])
-
-            # if crane_in_decision == 0:
-            #     sample_crane1 = [state, action[0]]
-            # else:
-            #     sample_crane2 = [state, action[0]]
-
-            # if info["crane_id"] == 0:
-            #     if len(sample_crane1) != 0:
-            #         sample_crane1 = sample_crane1 + [reward, next_state, done, crane_in_decision]
-            #         loss = agent.step(*sample_crane1)
-            #         if loss is not None:
-            #             loss_list.append(loss)
-            # else:
-            #     if len(sample_crane2) != 0:
-            #         sample_crane2 = sample_crane2 + [reward, next_state, done, crane_in_decision]
-            #         loss = agent.step(*sample_crane2)
-            #         if loss is not None:
-            #             loss_list.append(loss)
             loss = agent.step(state, action[0], reward, next_state, done)
             if loss is not None:
                 loss_list.append(loss)
@@ -163,7 +178,7 @@ if __name__ == "__main__":
                 break
 
         if episode % eval_every == 0 or episode == 1:
-            makespan = evaluate(validation_dir)
+            makespan = evaluate(validation_dir, look_ahead, rows, working_crane_ids, safety_margin)
             vessl.log(payload={"Makespan": makespan}, step=episode)
             # writer.add_scalar("Validation/Makespan", makespan, episode)
             with open(log_dir + "validation_log.csv", 'a') as f:
