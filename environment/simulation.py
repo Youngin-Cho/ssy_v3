@@ -355,10 +355,10 @@ class Management:
         possible_dict = dict()
         possible_dict[action] = 1
         for i in range(self.multi_dist):
-            target_coord = (self.piles[action].coord[0] - i, self.piles[action].coord[1])
+            target_coord = (int(self.piles[action].coord[0] - i), int(self.piles[action].coord[1]))
             if target_coord in self.location_mapping.keys():
                 possible_dict[self.location_mapping[target_coord].name] = 1
-            target_coord = (self.piles[action].coord[0] + i, self.piles[action].coord[1])
+            target_coord = (int(self.piles[action].coord[0] + i), int(self.piles[action].coord[1]))
             if target_coord in self.location_mapping.keys():
                 possible_dict[self.location_mapping[target_coord].name] = 1
         from_list = [action]
@@ -374,8 +374,8 @@ class Management:
                 if len(self.piles[pile].plates) >= possible_dict[pile]:
                     if self.piles[pile].plates[-possible_dict[pile]].to_pile == current_to_pile:
                         same_to_pile.append(pile)
-                    if abs(self.piles[self.piles[pile].plates[-possible_dict[pile]].to_pile].coord[0] -
-                           self.piles[current_to_pile].coord[0]) <= self.multi_dist:
+                    target_coord = self.piles[self.piles[pile].plates[-possible_dict[pile]].to_pile].coord
+                    if abs(target_coord[0] -self.piles[current_to_pile].coord[0]) <= self.multi_dist:
                         if weight + self.piles[pile].plates[-possible_dict[pile]].w <= self.multi_weight:
                             possible_action.append(pile)
             if action in same_to_pile:
@@ -385,8 +385,8 @@ class Management:
             if len(self.piles[action].plates) >= possible_dict[action] + 1:
                 if self.piles[action].plates[-possible_dict[action] - 1].to_pile == current_to_pile:
                     same_to_pile.append(action)
-                if abs(self.piles[self.piles[action].plates[-possible_dict[action] - 1].to_pile].coord[0] -
-                       self.piles[current_to_pile].coord[0]) <= self.multi_dist:
+                target_coord = self.piles[self.piles[action].plates[-possible_dict[action] - 1].to_pile].coord
+                if abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist:
                     if weight + self.piles[action].plates[-possible_dict[action] - 1].w <= self.multi_weight:
                         possible_action.append(action)
 
@@ -439,7 +439,10 @@ class Management:
             else:
                 tag = "Reshuflle"
 
-            from_list = self.multi_loading(action)
+            if self.piles[action].plates[-1].to_pile in ["cn1", "cn2", "cn3"]:
+                from_list = [action]
+            else:
+                from_list = self.multi_loading(action)
 
             for pile in from_list:
                 from_pile = self.piles[pile]

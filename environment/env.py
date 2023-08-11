@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from torch_geometric.data import HeteroData, Data
+from environment.data import DataGenerator
 from environment.simulation import Management
 
 
@@ -234,7 +235,7 @@ class SteelStockYard:
                     plate = self.model.piles[from_pile_name].plates[-1-j]
                     to_pile_name = plate.to_pile
                     to_pile_x = self.model.piles[to_pile_name].coord[0]
-                    weight = plate.weight
+                    weight = plate.w
                     node_features_for_pile[i, 3 * j + 1] = to_pile_x / 44
                     node_features_for_pile[i, 3 * j + 2] = weight / 19.294
 
