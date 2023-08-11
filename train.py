@@ -118,9 +118,9 @@ if __name__ == "__main__":
                              n_from_piles_retrieval_cn1=n_from_piles_retrieval_cn1,
                              n_from_piles_retrieval_cn2=n_from_piles_retrieval_cn2,
                              n_from_piles_retrieval_cn3=n_from_piles_retrieval_cn3,
-                             n_plates_storage = n_plates_storage,
-                             n_plates_reshuffle = n_plates_reshuffle,
-                             n_plates_retrieval = n_plates_retrieval,
+                             n_plates_storage=n_plates_storage,
+                             n_plates_reshuffle=n_plates_reshuffle,
+                             n_plates_retrieval=n_plates_retrieval,
                              working_crane_ids=working_crane_ids,
                              safety_margin=safety_margin)
     env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
@@ -188,6 +188,10 @@ if __name__ == "__main__":
 
         if episode % save_every == 0:
             agent.save(episode, model_dir)
+
+        if episode % 20 == 0:
+            env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
+                                 working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
         agent.scheduler.step()
 
