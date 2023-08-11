@@ -17,7 +17,9 @@ def evaluate(validation_dir, look_ahead, rows, working_crane_ids, safety_margin)
     makespans = []
 
     for path in validation_path:
-        test_env = SteelStockYard(path, look_ahead=look_ahead, rows=rows, working_crane_ids=working_crane_ids, safety_margin=safety_margin)
+        data_src = validation_dir + path
+        test_env = SteelStockYard(data_src, look_ahead=look_ahead, rows=rows,
+                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
         state, info = test_env.reset()
         crane_in_decision = info["crane_id"]
