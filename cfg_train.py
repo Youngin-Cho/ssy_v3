@@ -32,8 +32,8 @@ def get_cfg():
     parser.add_argument("--n_from_piles_retrieval_cn3", type=int, default=2, help="number of from-piles for trailers in retrieval work")
 
     parser.add_argument("--n_plates_storage", type=int, default=500, help="average number of steel plates per pile in storage work")
-    parser.add_argument("--n_plates_storage", type=int, default=150, help="average number of steel plates per pile in reshuffle work")
-    parser.add_argument("--n_plates_storage", type=int, default=150, help="average number of steel plates per pile in retrieval work")
+    parser.add_argument("--n_plates_reshuffle", type=int, default=150, help="average number of steel plates per pile in reshuffle work")
+    parser.add_argument("--n_plates_retrieval", type=int, default=150, help="average number of steel plates per pile in retrieval work")
 
     parser.add_argument("--is_crane1_working", type=bool, default=True, help="Crane-1 is working")
     parser.add_argument("--is_crane2_working", type=bool, default=True, help="Crane-2 is working")
