@@ -386,7 +386,7 @@ class Management:
             if len(self.piles[action].plates) >= possible_dict[action] + 1:
                 if self.piles[action].plates[-possible_dict[action] - 1].to_pile == current_to_pile:
                     same_to_pile.append(action)
-                if not self.piles[pile].plates[-possible_dict[pile]].to_pile in ["cn1", "cn2", "cn3"]:
+                if not self.piles[action].plates[-possible_dict[action] - 1].to_pile in ["cn1", "cn2", "cn3"]:
                     target_coord = self.piles[self.piles[action].plates[-possible_dict[action] - 1].to_pile].coord
                     if abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist:
                         if weight + self.piles[action].plates[-possible_dict[action] - 1].w <= self.multi_weight:
