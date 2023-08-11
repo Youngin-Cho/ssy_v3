@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from collections import OrderedDict
-from utilities import get_coord, get_moving_time
 
 
 class PriorityFilterGet(simpy.resources.store.FilterStore.get):
@@ -255,8 +254,18 @@ class Management:
 
         row_list = [chr(i) for i in range(ord(self.row_range[0]), ord(self.row_range[1]) + 1)]
         bay_list = [i for i in range(self.bay_range[0] - 1, self.bay_range[1] + 1)]
-        pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in row_list for col_id in bay_list]
-        piles = OrderedDict({name: Pile(name, get_coord(name)) for name in pile_list})
+        piles = OrderedDict()
+        for i, row_id in enumerate(row_list):
+            for j, bay_id in enumerate(bay_list):
+                name = row_id + str(bay_id).rjust(2, '0')
+                x_coord = j + 1
+                y_coord = i + 1
+                if self.output_points[0] <= x_coord:
+                    x_coord += 1
+                if self.output_points[1] <= x_coord:
+                    x_coord += 1
+                pile = Pile(name, (x_coord, y_coord))
+                piles[name] = pile
 
         conveyors = OrderedDict()
         conveyors['cn1'] = Conveyor('cn1', self.output_points[0], 0.01)

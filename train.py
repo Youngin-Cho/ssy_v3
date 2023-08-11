@@ -68,14 +68,14 @@ if __name__ == "__main__":
     n_plates_reshuffle = cfg.n_plates_reshuffle
     n_plates_retrieval = cfg.n_plates_retrieval
 
-    max_x = n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6
+    max_x = n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6 + 4
     max_y = cfg.n_rows
     row_range = (string.ascii_uppercase[0], string.ascii_uppercase[cfg.n_rows - 1])
     bay_range = (1, n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6)
     input_points = (1,)
-    output_points = (n_bays_in_area1 + n_bays_in_area2,
-                     n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3,
-                     n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6)
+    output_points = (1 + n_bays_in_area1 + n_bays_in_area2 + 1,
+                     1 + n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + 2,
+                     1 + n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6 + 3)
     working_crane_ids = tuple()
     if cfg.is_crane1_working:
         working_crane_ids = working_crane_ids + ("Crane-1", )
@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     validation_dir = './input/data/validation/'
 
-    data_src = DataGenerator(n_rows=n_rows,
+    data_src = DataGenerator(rows=tuple(i for i in string.ascii_uppercase[:cfg.n_rows]),
                              storage=storage,
                              reshuffle=reshuffle,
                              retrieval=retrieval,
