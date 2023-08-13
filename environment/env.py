@@ -112,7 +112,7 @@ class SteelStockYard:
                 possible = False
             if self.crane_in_decision == 1 and to_pile_x > self.max_x - self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 2  and to_pile_x < 1 + self.safety_margin:
+            if self.crane_in_decision == 2 and to_pile_x < 1 + self.safety_margin:
                 possible = False
             if from_pile_name in self.model.blocked_piles:
                 possible = False
