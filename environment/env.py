@@ -73,11 +73,9 @@ class SteelStockYard:
         reward = self._calculate_reward()
         next_state = self._get_state()
 
-        self.crane_in_decision = self.model.crane_in_decision
+        self.crane_in_decision = self.model.crane_in_decision.id
         info = {"crane_id": self.crane_in_decision}
         self.time = self.model.env.now
-
-        # self.get_logs("temp.csv")
 
         return next_state, reward, done, info
 
@@ -101,19 +99,20 @@ class SteelStockYard:
         possbile_actions = []
 
         for from_pile_name in np.unique(self.model.move_list):
-            to_pile_name = self.model.piles[from_pile_name].plates[-1].to_pile
+            cnt = self.model.crane_in_decision.opposite.from_piles.count(from_pile_name)
+            to_pile_name = self.model.piles[from_pile_name].plates[-1-cnt].to_pile
 
             possible = True
             from_pile_x = self.model.piles[from_pile_name].coord[0]
             to_pile_x = self.model.piles[to_pile_name].coord[0]
 
-            if self.crane_in_decision == 0 and from_pile_x > self.max_x - self.safety_margin:
+            if self.crane_in_decision == 1 and from_pile_x > self.max_x - self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 1 and from_pile_x < 1 + self.safety_margin:
+            if self.crane_in_decision == 2 and from_pile_x < 1 + self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 0 and to_pile_x > self.max_x - self.safety_margin:
+            if self.crane_in_decision == 1 and to_pile_x > self.max_x - self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 1 and to_pile_x < 1 + self.safety_margin:
+            if self.crane_in_decision == 2  and to_pile_x < 1 + self.safety_margin:
                 possible = False
             if from_pile_name in self.model.blocked_piles:
                 possible = False
