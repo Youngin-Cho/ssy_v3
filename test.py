@@ -90,8 +90,6 @@ if __name__ == "__main__":
                 agent.qnetwork_local.load_state_dict(checkpoint['model_state_dict'])
             elif name == "SD":
                 agent = shortest_distance
-            elif name == "LD":
-                agent = longest_distance
             elif name == "MA":
                 agent = minimize_avoiding_time
             else:
