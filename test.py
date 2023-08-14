@@ -1,6 +1,7 @@
 import os
 import vessl
 import time
+import string
 import torch
 import random
 import numpy as np
@@ -21,11 +22,31 @@ if __name__ == "__main__":
     data_dir = cfg.data_dir
     log_dir = cfg.log_dir
 
+    look_ahead = cfg.look_ahead
     algorithm = cfg.algorithm
     random_seed = cfg.random_seed
 
+    n_bays_in_area1 = cfg.n_bays_in_area1
+    n_bays_in_area2 = cfg.n_bays_in_area2
+    n_bays_in_area3 = cfg.n_bays_in_area3
+    n_bays_in_area4 = cfg.n_bays_in_area4
+    n_bays_in_area5 = cfg.n_bays_in_area5
+    n_bays_in_area6 = cfg.n_bays_in_area6
+
+    max_x = n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6 + 4
+    max_y = cfg.n_rows
+    row_range = (string.ascii_uppercase[0], string.ascii_uppercase[cfg.n_rows - 1])
+    bay_range = (1, n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6)
+    input_points = (1,)
+    output_points = (1 + n_bays_in_area1 + n_bays_in_area2 + 1,
+                     1 + n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + 2,
+                     1 + n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6 + 3)
+    working_crane_ids = tuple()
+    if cfg.is_crane1_working:
+        working_crane_ids = working_crane_ids + ("Crane-1",)
+    if cfg.is_crane2_working:
+        working_crane_ids = working_crane_ids + ("Crane-2",)
     safety_margin = cfg.safety_margin
-    crane_id = cfg.crane_id
 
     # simulation_dir = './output/test/simulation/case1/case1-1'
     # if not os.path.exists(simulation_dir):
@@ -57,12 +78,9 @@ if __name__ == "__main__":
             avoiding_time = 0.0
             computing_time = 0.0
 
-            df_storage = pd.read_excel(data_dir + path, sheet_name="storage", engine="openpyxl")
-            df_reshuffle = pd.read_excel(data_dir + path, sheet_name="reshuffle", engine="openpyxl")
-            df_retrieval = pd.read_excel(data_dir + path, sheet_name="retrieval", engine="openpyxl")
-            working_crane_ids = ("Crane-1", "Crane-2") if crane_id == "ALL" else (crane_id,)
-
-            env = SteelStockYard(df_storage=df_storage, df_reshuffle=df_reshuffle, df_retrieval=df_retrieval,
+            env = SteelStockYard(data_dir + path,look_ahead=look_ahead,
+                                 max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
+                                 input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin)
 
             if name == "RL":

@@ -3,20 +3,20 @@ import numpy as np
 from utilities import get_coord, get_moving_time
 
 
-def minimize_avoiding_time(state, possible_actions, crane_id=0):
+def minimize_avoiding_time(state, possible_actions, crane_id=1):
     x_velocity = 0.5
     safety_margin = 5
     pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in ("A", "B") for col_id in range(0, 41)]
     x_coords = np.zeros(len(pile_list))
 
-    if crane_id == 0:
-        opposite_crane_id = 1
+    if crane_id == 1:
+        opposite_crane_id = 2
     else:
-        opposite_crane_id = 0
+        opposite_crane_id = 1
 
-    from_xcoord_crane = int(state.x_dict["crane"].numpy()[crane_id][0] * 44)
-    from_xcoord_opposite_crane = int(state.x_dict["crane"].numpy()[opposite_crane_id][0] * 44)
-    to_xcoord_opposite_crane = int(state.x_dict["crane"].numpy()[opposite_crane_id][1] * 44)
+    from_xcoord_crane = int(state.x_dict["crane"].numpy()[crane_id - 1][0] * 44)
+    from_xcoord_opposite_crane = int(state.x_dict["crane"].numpy()[opposite_crane_id - 1][0] * 44)
+    to_xcoord_opposite_crane = int(state.x_dict["crane"].numpy()[opposite_crane_id - 1][1] * 44)
 
     if to_xcoord_opposite_crane == 0:
         actions_wo_interference = possible_actions
@@ -53,7 +53,7 @@ def minimize_avoiding_time(state, possible_actions, crane_id=0):
     return idx
 
 
-def shortest_distance(state, possible_actions, crane_id=0):
+def shortest_distance(state, possible_actions, crane_id=1):
     pile_list = [row_id + str(col_id).rjust(2, '0') for row_id in ("A", "B") for col_id in range(0, 41)]
     x_coords = np.zeros(len(pile_list))
     mask = []
@@ -62,7 +62,7 @@ def shortest_distance(state, possible_actions, crane_id=0):
         if not i + 1 in possible_actions:
             mask.append(i)
 
-    x_crane = state.x_dict["crane"].numpy()[crane_id][0]
+    x_crane = state.x_dict["crane"].numpy()[crane_id - 1][0]
     distance = np.abs(x_coords - x_crane)
     distance[mask] = np.inf
 
@@ -70,49 +70,6 @@ def shortest_distance(state, possible_actions, crane_id=0):
         idx = 0
     else:
         idx = random.choice(np.where(distance == np.min(distance))[0]) + 1
-
-    return idx
-
-def shortest_distance_pre(state, possible_actions, crane_id=0):
-    crane_state = state.x_dict["crane"].numpy()[crane_id]
-    pile_state = state.x_dict["pile"].numpy()
-    crane_state = np.concatenate([crane_state[:22], crane_state[23:26], crane_state[27:43],
-                                  crane_state[44:66], crane_state[67:70], crane_state[71:87]], axis=0)
-    pile_state = np.concatenate([pile_state[:,:22], pile_state[:,23:26], pile_state[:,27:43],
-                                 pile_state[:,44:66], pile_state[:,67:70], pile_state[:,71:87]], axis=1)
-    target_pile = np.argmin(pile_state, axis=1) + 1
-
-    mask1 = [i for i in range(len(crane_state)) if i not in target_pile]
-    mask2 = [i for i in target_pile if i not in possible_actions]
-    crane_state[mask1] = np.inf
-    crane_state[mask2] = np.inf
-
-    if np.all(crane_state == np.inf):
-        idx = 0
-    else:
-        idx = random.choice(np.where(crane_state == np.min(crane_state))[0])
-
-    return idx
-
-
-def longest_distance(state, possible_actions, crane_id=0):
-    crane_state = state.x_dict["crane"].numpy()[crane_id]
-    pile_state = state.x_dict["pile"].numpy()
-    crane_state = np.concatenate([crane_state[:22], crane_state[23:26], crane_state[27:43],
-                                  crane_state[44:66], crane_state[67:70], crane_state[71:87]], axis=0)
-    pile_state = np.concatenate([pile_state[:, :22], pile_state[:, 23:26], pile_state[:, 27:43],
-                                 pile_state[:, 44:66], pile_state[:, 67:70], pile_state[:, 71:87]], axis=1)
-    target_pile = np.argmin(pile_state, axis=1) + 1
-
-    mask1 = [i for i in range(len(crane_state)) if i not in target_pile]
-    mask2 = [i for i in target_pile if i not in possible_actions]
-    crane_state[mask1] = - np.inf
-    crane_state[mask2] = - np.inf
-
-    if np.all(crane_state == - np.inf):
-        idx = 0
-    else:
-        idx = random.choice(np.where(crane_state == np.max(crane_state))[0])
 
     return idx
 
