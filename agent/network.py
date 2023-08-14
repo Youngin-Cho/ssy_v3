@@ -90,9 +90,9 @@ class Network(nn.Module):
         x_dict = {key: F.selu(x) for key, x in x_dict.items()}
 
         batch_idx = torch.arange(batch_size).to(device)
-        batch_idx_pile = batch_idx.repeat_interleave(int(x_dict["pile"].size(0) / batch_size))
+        batch_idx_pile = batch_idx.repeat_interleave(int(x_dict["plate"].size(0) / batch_size))
         batch_idx_crane = batch_idx.repeat_interleave(int(x_dict["crane"].size(0) / batch_size))
-        x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["pile"], batch_idx_pile)
+        x = global_add_pool(x_dict["crane"], batch_idx_crane) + global_add_pool(x_dict["plate"], batch_idx_pile)
 
         cos, taus = self.calc_cos(batch_size, num_tau)  # cos shape (batch, num_tau, layer_size)
         cos = cos.view(batch_size * num_tau, self.n_cos)

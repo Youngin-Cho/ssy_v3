@@ -1,5 +1,5 @@
 import os
-import vessl
+# import vessl
 import time
 import string
 import torch
@@ -16,7 +16,7 @@ from cfg_test import *
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
+    # vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
     model_path = cfg.model_path
     data_dir = cfg.data_dir
