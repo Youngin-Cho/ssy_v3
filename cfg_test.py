@@ -26,9 +26,6 @@ def get_cfg():
     parser.add_argument("--algorithm", type=str, default="ALL", help="test algorithm")
     parser.add_argument("--random_seed", type=int, default=42, help="random seed")
 
-    parser.add_argument("--crane_id", type=str, default="ALL", help="working crane ids")
-    parser.add_argument("--safety_margin", type=int, default=5, help="safety margin between two cranes")
-
     args = parser.parse_args()
 
     return args
