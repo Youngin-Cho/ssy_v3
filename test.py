@@ -78,7 +78,7 @@ if __name__ == "__main__":
             avoiding_time = 0.0
             computing_time = 0.0
 
-            env = SteelStockYard(data_dir + path,look_ahead=look_ahead,
+            env = SteelStockYard(data_dir + path, look_ahead=look_ahead,
                                  max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                                  input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin)

@@ -499,7 +499,12 @@ class Management:
                             crane.empty_travel_time += moving_time
 
                     if moving_time_opposite_crane > moving_time_crane:
+                        # self.monitor.record(self.env.now, "Avoiding_wait_start", crane=crane.name,
+                        #                     location=self.location_mapping[crane.current_coord].name, plate=None)
                         yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
+                        crane.opposite.update_location(self.env.now)
+                        # self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
+                        #                     location=self.location_mapping[crane.current_coord].name, plate=None)
                         crane.avoiding_time += moving_time_opposite_crane - moving_time_crane
                 else:
                     self.monitor.record(self.env.now, "Move_from", crane=crane.name,
