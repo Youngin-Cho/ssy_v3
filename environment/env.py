@@ -36,7 +36,7 @@ class SteelStockYard:
                           [("crane", "interfering", "crane"),
                            ("pile", "moving_rev", "crane"),
                            ("crane", "moving", "pile"),
-                           ("plate", "stacking", "pile")])
+                           ("pile", "stacking", "pile")])
 
         self.crane_list = ["Crane-1", "Crane-2"]
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
