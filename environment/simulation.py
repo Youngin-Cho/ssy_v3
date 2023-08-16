@@ -220,7 +220,7 @@ class Management:
         self.safety_margin = safety_margin
 
         self.multi_weight = 20.0
-        self.multi_num = 1
+        self.multi_num = 3
         self.multi_dist = 2
 
         self.env, self.piles, self.conveyors, self.cranes, self.monitor = self._modeling()
