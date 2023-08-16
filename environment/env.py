@@ -31,12 +31,12 @@ class SteelStockYard:
             self.df_retrieval = pd.read_excel(self.data_src, sheet_name="retrieval", engine="openpyxl")
 
         self.action_size = 2 * 40 + 2 + 1
-        self.state_size = {"crane": 2, "plate": 2 * look_ahead}
-        self.meta_data = (["crane", "plate"],
+        self.state_size = {"crane": 2, "pile": 2 * look_ahead}
+        self.meta_data = (["crane", "pile"],
                           [("crane", "interfering", "crane"),
-                           ("plate", "moving_rev", "crane"),
-                           ("crane", "moving", "plate"),
-                           ("plate", "stacking", "plate")])
+                           ("pile", "moving_rev", "crane"),
+                           ("crane", "moving", "pile"),
+                           ("plate", "stacking", "pile")])
 
         self.crane_list = ["Crane-1", "Crane-2"]
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
@@ -215,7 +215,7 @@ class SteelStockYard:
         num_of_edge_for_pile_crane = len(self.pile_list) * len(self.crane_list)
         num_of_edge_for_crane_crane = len(self.crane_list) * (len(self.crane_list) - 1)
 
-        node_features_for_pile = np.zeros((num_of_node_for_pile, self.state_size["plate"]))
+        node_features_for_pile = np.zeros((num_of_node_for_pile, self.state_size["pile"]))
         node_features_for_crane = np.zeros((num_of_node_for_crane, self.state_size["crane"]))
 
         for i, crane_name in enumerate(self.crane_list):
@@ -250,7 +250,7 @@ class SteelStockYard:
                     # node_features_for_pile[i, 3 * j + 2] = weight / 19.294
 
         state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32)
-        state['plate'].x = torch.tensor(node_features_for_pile, dtype=torch.float32)
+        state['pile'].x = torch.tensor(node_features_for_pile, dtype=torch.float32)
 
         edge_pile_pile = np.zeros((2, num_of_edge_for_pile_pile))
         edge_crane_pile = np.zeros((2, num_of_edge_for_crane_pile))
@@ -273,9 +273,9 @@ class SteelStockYard:
             edge_crane_crane[1, i * (len(self.crane_list) - 1):(i + 1) * (len(self.crane_list) - 1)] \
                 = [j for j in range(len(self.crane_list)) if j != i]
 
-        state['plate', 'stacking', 'plate'].edge_index = torch.tensor(edge_pile_pile, dtype=torch.long)
-        state['crane', 'moving', 'plate'].edge_index = torch.tensor(edge_crane_pile, dtype=torch.long)
-        state['plate', 'moving_rev', 'crane'].edge_index = torch.tensor(edge_pile_crane, dtype=torch.long)
+        state['pile', 'stacking', 'pile'].edge_index = torch.tensor(edge_pile_pile, dtype=torch.long)
+        state['crane', 'moving', 'pile'].edge_index = torch.tensor(edge_crane_pile, dtype=torch.long)
+        state['pile', 'moving_rev', 'crane'].edge_index = torch.tensor(edge_pile_crane, dtype=torch.long)
         state['crane', 'interfering', 'crane'].edge_index = torch.tensor(edge_crane_crane, dtype=torch.long)
 
         return state
