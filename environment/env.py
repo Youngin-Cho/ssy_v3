@@ -31,7 +31,7 @@ class SteelStockYard:
             self.df_retrieval = pd.read_excel(self.data_src, sheet_name="retrieval", engine="openpyxl")
 
         self.action_size = 2 * 40 + 2 + 1
-        self.state_size = {"crane": 2, "pile": 2 * look_ahead}
+        self.state_size = {"crane": 2, "pile": 1 + 2 * look_ahead}
         self.meta_data = (["crane", "pile"],
                           [("crane", "interfering", "crane"),
                            ("pile", "moving_rev", "crane"),
@@ -238,16 +238,15 @@ class SteelStockYard:
             from_pile_x = self.model.piles[from_pile_name].coord[0]
             plates = self.model.piles[from_pile_name].plates
 
+            node_features_for_pile[i, 0] = from_pile_x / 44
             for j in range(self.look_ahead):
-                node_features_for_pile[i, 3 * j] = from_pile_x / 44
-
                 if len(plates) >= j + 1:
                     plate = self.model.piles[from_pile_name].plates[-1-j]
                     to_pile_name = plate.to_pile
                     to_pile_x = self.model.piles[to_pile_name].coord[0]
                     weight = plate.w
-                    node_features_for_pile[i, 3 * j + 1] = to_pile_x / 44
-                    # node_features_for_pile[i, 3 * j + 2] = weight / 19.294
+                    node_features_for_pile[i, 2 * j + 1] = to_pile_x / 44
+                    node_features_for_pile[i, 2 * j + 2] = weight / 19.294
 
         state['crane'].x = torch.tensor(node_features_for_crane, dtype=torch.float32)
         state['pile'].x = torch.tensor(node_features_for_pile, dtype=torch.float32)
