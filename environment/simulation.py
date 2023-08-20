@@ -171,7 +171,9 @@ class Conveyor:
 
 
 class Monitor:
-    def __init__(self):
+    def __init__(self, record_events=False):
+        self.record_events = record_events
+
         self.time = []
         self.event = []
         self.crane = []
@@ -206,7 +208,7 @@ class Management:
     def __init__(self, df_storage, df_reshuffle, df_retrieval,
                  max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
                  input_points=(1,), output_points=(23, 27, 44),
-                 working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5):
+                 working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5, record_events=False):
         self.df_storage = df_storage
         self.df_reshuffle = df_reshuffle
         self.df_retrieval = df_retrieval
@@ -218,6 +220,7 @@ class Management:
         self.input_points = input_points
         self.output_points = output_points
         self.safety_margin = safety_margin
+        self.record_events = record_events
 
         self.multi_weight = 20.0
         self.multi_num = 3
@@ -307,7 +310,7 @@ class Management:
         if crane2.name in self.working_crane_ids:
             cranes.put(crane2)
 
-        monitor = Monitor()
+        monitor = Monitor(record_events=self.record_events)
 
         return env, piles, conveyors, cranes, monitor
 
@@ -434,14 +437,16 @@ class Management:
             crane.idle_event = self.env.event()
 
             waiting_start = self.env.now
-            self.monitor.record(self.env.now, "Waiting Start", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord].name)
+            if self.monitor.record_events:
+                self.monitor.record(self.env.now, "Waiting Start", crane=crane.name,
+                                    location=self.location_mapping[crane.current_coord].name)
 
             yield crane.idle_event
 
             waiting_finish = self.env.now
-            self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name,
-                                location=self.location_mapping[crane.current_coord].name)
+            if self.record_events:
+                self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name,
+                                    location=self.location_mapping[crane.current_coord].name)
             crane.waiting_time += waiting_finish - waiting_start
         else:
             crane.idle = False
@@ -484,11 +489,13 @@ class Management:
                     moving_time_opposite_crane = crane.opposite.get_moving_time(to_xcoord=crane.opposite.target_coord[0],
                                                                                 to_ycoord=crane.opposite.target_coord[1])
 
-                    self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                        location=self.location_mapping[crane.current_coord].name, plate=None)
+                    if self.monitor.record_events:
+                        self.monitor.record(self.env.now, "Move_from", crane=crane.name,
+                                            location=self.location_mapping[crane.current_coord].name, plate=None)
                     moving_time = yield self.env.process(crane.move(to_xcoord=safety_xcoord))
-                    self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                        location=self.location_mapping[crane.current_coord].name, plate=None)
+                    if self.monitor.record_events:
+                        self.monitor.record(self.env.now, "Move_to", crane=crane.name,
+                                            location=self.location_mapping[crane.current_coord].name, plate=None)
                     crane.safety_xcoord = -1.0
 
                     if opposite_direction:
@@ -507,12 +514,14 @@ class Management:
                         #                     location=self.location_mapping[crane.current_coord].name, plate=None)
                         crane.avoiding_time += moving_time_opposite_crane - moving_time_crane
                 else:
-                    self.monitor.record(self.env.now, "Move_from", crane=crane.name,
-                                        location=self.location_mapping[crane.current_coord].name, plate=None)
+                    if self.monitor.record_events:
+                        self.monitor.record(self.env.now, "Move_from", crane=crane.name,
+                                            location=self.location_mapping[crane.current_coord].name, plate=None)
                     moving_time = yield self.env.process(crane.move(to_xcoord=crane.target_coord[0],
                                                                     to_ycoord=crane.target_coord[1]))
-                    self.monitor.record(self.env.now, "Move_to", crane=crane.name,
-                                        location=self.location_mapping[crane.current_coord].name, plate=None)
+                    if self.monitor.record_events:
+                        self.monitor.record(self.env.now, "Move_to", crane=crane.name,
+                                            location=self.location_mapping[crane.current_coord].name, plate=None)
 
                     if added_moving_time > 0.0:
                         crane.avoiding_time += added_moving_time
@@ -524,8 +533,9 @@ class Management:
 
             if loading:
                 plate_name = crane.get_plate(self.piles[location])
-                self.monitor.record(self.env.now, "Pick_up", crane=crane.name,
-                                    location=self.location_mapping[crane.current_coord].name, plate=plate_name)
+                if self.monitor.record_events:
+                    self.monitor.record(self.env.now, "Pick_up", crane=crane.name,
+                                        location=self.location_mapping[crane.current_coord].name, plate=plate_name)
                 crane.from_piles.remove(location)
                 crane.to_piles.insert(0, crane.plates[-1].to_pile)
             else:
@@ -533,8 +543,9 @@ class Management:
                     plate_name = crane.put_plate(self.piles[location])
                 else:
                     plate_name = crane.put_plate(self.conveyors[location])
-                self.monitor.record(self.env.now, "Put_down", crane=crane.name,
-                                    location=self.location_mapping[crane.current_coord].name, plate=plate_name)
+                if self.monitor.record_events:
+                    self.monitor.record(self.env.now, "Put_down", crane=crane.name,
+                                        location=self.location_mapping[crane.current_coord].name, plate=plate_name)
                 crane.to_piles.remove(location)
 
         self.priority_queue.remove(crane.name)
@@ -651,7 +662,8 @@ class Management:
             try:
                 IAT = random.expovariate(conveyor.IAT)
                 yield self.env.timeout(IAT)
-                self.monitor.record(self.env.now, "Release", crane=None, location=conveyor.name, plate=None)
+                if self.monitor.record_events:
+                    self.monitor.record(self.env.now, "Release", crane=None, location=conveyor.name, plate=None)
 
                 # request a crane
                 if self.waiting_crane is not None:

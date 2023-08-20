@@ -8,6 +8,7 @@ def get_cfg():
     parser.add_argument("--model_path", type=str, default=None, help="model file path")
 
     parser.add_argument("--look_ahead", type=int, default=2, help="number of steel plates included in states")
+    parser.add_argument("--record_events", type=bool, default=False, help="Whether to record events")
 
     # 데이터 생성 관련 파라미터
     parser.add_argument("--n_rows", type=int, default=2, help="steel plates data for storage")

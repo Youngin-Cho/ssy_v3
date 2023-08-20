@@ -47,6 +47,9 @@ if __name__ == "__main__":
     cfg = get_cfg()
     vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
+    look_ahead = cfg.look_ahead
+    record_events = cfg.record_events
+
     n_rows = cfg.n_rows
     storage = cfg.storage
     reshuffle = cfg.reshuffle
@@ -87,7 +90,6 @@ if __name__ == "__main__":
     eval_every = cfg.eval_every
     save_every = cfg.save_every
 
-    look_ahead = cfg.look_ahead
     n_units = cfg.n_units
     n_step = cfg.n_step
     capacity = cfg.capacity
@@ -137,7 +139,7 @@ if __name__ == "__main__":
     env = SteelStockYard(data_src, look_ahead=look_ahead,
                          max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                          input_points=input_points, output_points=output_points,
-                         working_crane_ids=working_crane_ids, safety_margin=safety_margin)
+                         working_crane_ids=working_crane_ids, safety_margin=safety_margin, record_events=record_events)
 
     agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead, n_units,
                   capacity, alpha, beta_start, beta_steps,
