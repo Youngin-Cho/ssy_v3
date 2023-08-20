@@ -36,7 +36,8 @@ def evaluate(validation_dir):
 
             if done:
                 log = test_env.get_logs()
-                makespan = log["Time"].max() / len(log["Event"] == "Pick_up")
+                makespan = test_env.model.env.now / test_env.model.num_plates_cum
+                # makespan = log["Time"].max() / len(log["Event"] == "Pick_up")
                 makespans.append(makespan)
                 break
 

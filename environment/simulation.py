@@ -228,6 +228,7 @@ class Management:
 
         self.env, self.piles, self.conveyors, self.cranes, self.monitor = self._modeling()
         self.move_list = list(df_storage["pileno"].values) + list(df_reshuffle["pileno"].values)
+        self.num_plates_cum = 0
         self.blocked_piles = list()
         self.last_action = None
         self.waiting_crane = None
@@ -547,6 +548,7 @@ class Management:
                     self.monitor.record(self.env.now, "Put_down", crane=crane.name,
                                         location=self.location_mapping[crane.current_coord].name, plate=plate_name)
                 crane.to_piles.remove(location)
+                self.num_plates_cum += 1
 
         self.priority_queue.remove(crane.name)
 
