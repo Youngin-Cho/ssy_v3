@@ -89,6 +89,7 @@ if __name__ == "__main__":
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
     save_every = cfg.save_every
+    new_instance_every = cfg.new_instance_every
 
     n_units = cfg.n_units
     n_step = cfg.n_step
@@ -204,7 +205,7 @@ if __name__ == "__main__":
         if episode % save_every == 0:
             agent.save(episode, model_dir)
 
-        if episode % 20 == 0:
+        if episode % new_instance_every == 0:
             env = SteelStockYard(data_src, look_ahead=look_ahead,
                                  max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                                  input_points=input_points, output_points=output_points,

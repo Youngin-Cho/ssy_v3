@@ -42,8 +42,9 @@ def get_cfg():
 
     # 알고리즘 파라미터
     parser.add_argument("--n_episode", type=int, default=10000, help="Number of episodes to train")
-    parser.add_argument("--eval_every", type=int, default=200, help="Evaluate every x frames")
-    parser.add_argument("--save_every", type=int, default=1000, help="Save a model every x frames")
+    parser.add_argument("--eval_every", type=int, default=200, help="Evaluate every x episodes")
+    parser.add_argument("--save_every", type=int, default=1000, help="Save a model every x episodes")
+    parser.add_argument("--new_instance_every", type=int, default=10, help="Generate new scenarios every x episodes")
     parser.add_argument("--n_units", type=int, default=128, help="Number of units in hidden layers of IQN")
     parser.add_argument("--n_step", type=int, default=3, help="Multistep IQN")
     parser.add_argument("--capacity", type=int, default=1000, help="Replay memory size")
