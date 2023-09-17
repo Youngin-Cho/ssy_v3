@@ -76,6 +76,8 @@ class Crane:
         self.idle_event = self.env.event()
 
         self.moving = False
+        self.loading = False
+        self.unloading = False
         self.x_velocity = 0.5
         self.y_velocity = 1.0
         self.update_time = 0.0
@@ -453,10 +455,14 @@ class Management:
             crane.idle = False
 
             # Plate loading
+            crane.loading = True
             yield self.env.process(self.collision_avoidance(crane, loading=True))
+            crane.loading = False
 
             # Plate Unloading
+            crane.unloading = True
             yield self.env.process(self.collision_avoidance(crane, loading=False))
+            crane.unloading = False
 
             if not crane.opposite.idle_event.triggered:
                 crane.opposite.idle_event.succeed()
@@ -466,13 +472,15 @@ class Management:
         # release a crane
         yield self.cranes.put(crane)
 
-    def collision_avoidance(self, crane, loading=True):
+    def collision_avoidance(self, crane):
         self.priority_queue.append(crane.name)
 
-        if loading:
+        if crane.loading:
             location_list = crane.from_piles[:]
-        else:
+        elif crane.unloading:
             location_list = crane.to_piles[:]
+        else:
+            location_list = []
 
         for location in location_list:
             added_moving_time = 0.0
@@ -503,7 +511,7 @@ class Management:
                         crane.avoiding_time += moving_time
                         added_moving_time += moving_time
                     else:
-                        if loading:
+                        if crane.loading:
                             crane.empty_travel_time += moving_time
 
                     if moving_time_opposite_crane > moving_time_crane:
@@ -527,12 +535,12 @@ class Management:
                     if added_moving_time > 0.0:
                         crane.avoiding_time += added_moving_time
 
-                    if loading:
+                    if crane.loading:
                         crane.empty_travel_time += (moving_time - added_moving_time)
 
                     break
 
-            if loading:
+            if crane.loading:
                 plate_name = crane.get_plate(self.piles[location])
                 if self.monitor.record_events:
                     self.monitor.record(self.env.now, "Pick_up", crane=crane.name,
@@ -564,10 +572,12 @@ class Management:
             moving_time_crane = max(abs(dx) / crane.x_velocity, abs(dy) / crane.y_velocity)
 
             trajectory_opposite_crane = []
-            if len(crane.opposite.from_piles) > 0:
+            if crane.opposite.loading:
                 location_list = crane.opposite.from_piles
-            else:
+            elif crane.opposite.unloading:
                 location_list = crane.opposite.to_piles
+            else:
+                location_list = []
 
             current_coord_opposite_crane = crane.opposite.current_coord
             for location in location_list:
@@ -589,6 +599,8 @@ class Management:
 
             current_coord_opposite_crane = crane.opposite.current_coord
             moving_time_cum = 0.0
+            avoidance = False
+            safety_xcoord = None
             for i, move in enumerate(trajectory_opposite_crane):
                 if moving_time_crane <= move[1] + moving_time_cum:
                     min_moving_time = moving_time_crane
@@ -611,10 +623,14 @@ class Management:
                     break
                 else:
                     if crane.name == min_crane:
+                        check_same_pile = ((crane.loading and crane.opposite.loading)
+                                           or (crane.loading and crane.opposite.unloading)
+                                           or (crane.unlooading and crane.opposite.unloading))
                         same_pile = False
-                        for temp in trajectory_opposite_crane[i:]:
-                            if crane.target_coord[0] == temp[2][0] and crane.target_coord[1] == temp[2][1]:
-                                same_pile = True
+                        if check_same_pile:
+                            for temp in trajectory_opposite_crane[i:]:
+                                if crane.target_coord[0] == temp[2][0] and crane.target_coord[1] == temp[2][1]:
+                                    same_pile = True
 
                         if same_pile:
                             avoidance = True
