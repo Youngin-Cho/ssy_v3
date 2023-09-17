@@ -456,12 +456,12 @@ class Management:
 
             # Plate loading
             crane.loading = True
-            yield self.env.process(self.collision_avoidance(crane, loading=True))
+            yield self.env.process(self.collision_avoidance(crane))
             crane.loading = False
 
             # Plate Unloading
             crane.unloading = True
-            yield self.env.process(self.collision_avoidance(crane, loading=False))
+            yield self.env.process(self.collision_avoidance(crane))
             crane.unloading = False
 
             if not crane.opposite.idle_event.triggered:
@@ -625,7 +625,7 @@ class Management:
                     if crane.name == min_crane:
                         check_same_pile = ((crane.loading and crane.opposite.loading)
                                            or (crane.loading and crane.opposite.unloading)
-                                           or (crane.unlooading and crane.opposite.unloading))
+                                           or (crane.unloading and crane.opposite.unloading))
                         same_pile = False
                         if check_same_pile:
                             for temp in trajectory_opposite_crane[i:]:
@@ -707,11 +707,16 @@ class Management:
 
                 # 출고 작업을 수행할 강재가 적치되어 있는 파일 리스트 생성
                 candidates = []
-                for i in self.df_retrieval["pileno"].unique():
-                    if len(self.piles[i].plates) > 0:
-                        temp = self.df_retrieval[self.df_retrieval["pileno"] == i]
+                for from_pile_name in self.df_retrieval["pileno"].unique():
+                    cnt = crane.opposite.from_piles.count(from_pile_name)
+                    if cnt > 0:
+                        plates = self.piles[from_pile_name].plates[:-1-cnt]
+                    else:
+                        plates = self.piles[from_pile_name].plates[:]
+                    if len(plates) > 0:
+                        temp = self.df_retrieval[self.df_retrieval["pileno"] == from_pile_name]
                         if conveyor.name in temp["topile"].unique():
-                            candidates.append(i)
+                            candidates.append(from_pile_name)
 
                 # 생성된 파일 리스트에서 랜덤하게 파일을 하나 선택하고 해당 파일에 적치된 강재에 대한 출고 작업 수행
                 if len(candidates) > 0:
@@ -721,10 +726,14 @@ class Management:
                     crane.from_piles.append(from_pile)
 
                     # Plate Loading
-                    yield self.env.process(self.collision_avoidance(crane, loading=True))
+                    crane.loading = True
+                    yield self.env.process(self.collision_avoidance(crane))
+                    crane.loading = False
 
                     # Plate Unloading
-                    yield self.env.process(self.collision_avoidance(crane, loading=False))
+                    crane.unloading = True
+                    yield self.env.process(self.collision_avoidance(crane))
+                    crane.unloading = False
 
                     if not crane.opposite.idle_event.triggered:
                         crane.opposite.idle_event.succeed()
