@@ -408,7 +408,8 @@ class Management:
                         target_coord = self.piles[candidate_plate.to_pile].coord
                         if ((crane.name == "Crane-1" and target_coord[0] <= self.max_x - self.safety_margin) or
                                 (crane.name == "Crane-2" and target_coord[0] >= 1 + self.safety_margin)):
-                            if abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist:
+                            if (abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist
+                                    and target_coord[1] == self.piles[current_to_pile].coord[1]):
                                 if weight + candidate_plate.w <= self.multi_weight:
                                     possible_action.append(pile)
 
@@ -515,12 +516,11 @@ class Management:
                             crane.empty_travel_time += moving_time
 
                     if moving_time_opposite_crane > moving_time_crane:
-                        # self.monitor.record(self.env.now, "Avoiding_wait_start", crane=crane.name,
-                        #                     location=self.location_mapping[crane.current_coord].name, plate=None)
-                        yield self.env.timeout(moving_time_opposite_crane - moving_time_crane + 0.000001)
-                        crane.opposite.update_location(self.env.now)
-                        # self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
-                        #                     location=self.location_mapping[crane.current_coord].name, plate=None)
+                        self.monitor.record(self.env.now, "Avoiding_wait_start", crane=crane.name,
+                                            location=self.location_mapping[crane.current_coord].name, plate=None)
+                        yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
+                        self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
+                                            location=self.location_mapping[crane.current_coord].name, plate=None)
                         crane.avoiding_time += moving_time_opposite_crane - moving_time_crane
                 else:
                     if self.monitor.record_events:
