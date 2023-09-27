@@ -73,7 +73,8 @@ class Crane:
         self.opposite = None
         self.idle = True
         self.move_until = -1.0
-        self.idle_event = self.env.event()
+        self.idle_event = None
+        self.avoiding_event = None
 
         self.moving = False
         self.loading = False
@@ -465,7 +466,7 @@ class Management:
             yield self.env.process(self.collision_avoidance(crane))
             crane.unloading = False
 
-            if not crane.opposite.idle_event.triggered:
+            if (crane.opposite.idle_event is not None) and (not crane.opposite.idle_event.triggered):
                 crane.opposite.idle_event.succeed()
 
         crane.idle = True
@@ -516,12 +517,21 @@ class Management:
                             crane.empty_travel_time += moving_time
 
                     if moving_time_opposite_crane > moving_time_crane:
-                        self.monitor.record(self.env.now, "Avoiding_wait_start", crane=crane.name,
-                                            location=self.location_mapping[crane.current_coord].name, plate=None)
-                        yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
-                        self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
-                                            location=self.location_mapping[crane.current_coord].name, plate=None)
-                        crane.avoiding_time += moving_time_opposite_crane - moving_time_crane
+                        avoiding_start = self.env.now
+                        if self.monitor.record_events:
+                            self.monitor.record(self.env.now, "Avoiding_wait_start", crane=crane.name,
+                                                location=self.location_mapping[crane.current_coord].name, plate=None)
+
+                        crane.avoiding_event = self.env.event()
+                        yield crane.avoiding_event
+
+                        avoiding_finish = self.env.now
+                        # yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
+                        if self.monitor.record_events:
+                            self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
+                                                location=self.location_mapping[crane.current_coord].name, plate=None)
+                        crane.avoiding_time += avoiding_finish - avoiding_start
+                        # crane.avoiding_time += moving_time_opposite_crane - moving_time_crane
                 else:
                     if self.monitor.record_events:
                         self.monitor.record(self.env.now, "Move_from", crane=crane.name,
@@ -537,6 +547,9 @@ class Management:
 
                     if crane.loading:
                         crane.empty_travel_time += (moving_time - added_moving_time)
+
+                    if (crane.opposite.avoiding_event is not None) and (not crane.opposite.avoiding_event.triggered):
+                        crane.opposite.avoiding_event.succeed()
 
                     break
 
@@ -648,7 +661,7 @@ class Management:
                             safety_xcoord = None
                         else:
                             current_coord_opposite_crane = move[2]
-                            moving_time_cum += min_moving_time
+                            moving_time_cum = min_moving_time
 
         return avoidance, safety_xcoord
 
@@ -735,7 +748,7 @@ class Management:
                     yield self.env.process(self.collision_avoidance(crane))
                     crane.unloading = False
 
-                    if not crane.opposite.idle_event.triggered:
+                    if (crane.opposite.idle_event is not None) and (not crane.opposite.idle_event.triggered):
                         crane.opposite.idle_event.succeed()
 
                 crane.idle = True
