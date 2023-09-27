@@ -522,11 +522,11 @@ class Management:
                             self.monitor.record(self.env.now, "Avoiding_wait_start", crane=crane.name,
                                                 location=self.location_mapping[crane.current_coord].name, plate=None)
 
-                        crane.avoiding_event = self.env.event()
-                        yield crane.avoiding_event
+                        # crane.avoiding_event = self.env.event()
+                        # yield crane.avoiding_event
+                        yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
 
                         avoiding_finish = self.env.now
-                        yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
                         if self.monitor.record_events:
                             self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
                                                 location=self.location_mapping[crane.current_coord].name, plate=None)
