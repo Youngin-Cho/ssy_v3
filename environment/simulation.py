@@ -74,7 +74,7 @@ class Crane:
         self.idle = True
         self.move_until = -1.0
         self.idle_event = None
-        self.avoiding_event = None
+        # self.avoiding_event = None
 
         self.moving = False
         self.loading = False
@@ -526,7 +526,7 @@ class Management:
                         yield crane.avoiding_event
 
                         avoiding_finish = self.env.now
-                        # yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
+                        yield self.env.timeout(moving_time_opposite_crane - moving_time_crane)
                         if self.monitor.record_events:
                             self.monitor.record(self.env.now, "Avoiding_wait_finish", crane=crane.name,
                                                 location=self.location_mapping[crane.current_coord].name, plate=None)
@@ -548,8 +548,8 @@ class Management:
                     if crane.loading:
                         crane.empty_travel_time += (moving_time - added_moving_time)
 
-                    if (crane.opposite.avoiding_event is not None) and (not crane.opposite.avoiding_event.triggered):
-                        crane.opposite.avoiding_event.succeed()
+                    # if (crane.opposite.avoiding_event is not None) and (not crane.opposite.avoiding_event.triggered):
+                    #     crane.opposite.avoiding_event.succeed()
 
                     break
 
@@ -572,7 +572,6 @@ class Management:
                 self.num_plates_cum += 1
 
         self.priority_queue.remove(crane.name)
-
 
     def check_interference(self, crane):
         if crane.opposite.idle or self.priority_queue.index(crane.name) == 0:
