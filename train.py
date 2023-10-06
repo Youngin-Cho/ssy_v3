@@ -114,7 +114,7 @@ if __name__ == "__main__":
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    validation_dir = './input/data/validation/'
+    validation_dir = './input/data/validation_without_retrieval/'
 
     data_src = DataGenerator(rows=tuple(i for i in string.ascii_uppercase[:cfg.n_rows]),
                              storage=storage,
