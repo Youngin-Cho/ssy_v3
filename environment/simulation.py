@@ -490,7 +490,22 @@ class Management:
                 crane.target_coord = self.piles[location].coord
             else:
                 crane.target_coord = (self.conveyors[location].coord[0], crane.current_coord[1])
-            while True:
+
+            if crane.opposite.idle:
+                num_loop = 1
+            else:
+                if self.priority_queue.index(crane.name) == 0:
+                    num_loop = 1
+                else:
+                    if crane.opposite.loading:
+                        num_loop = len(crane.opposite.from_piles)
+                    elif crane.opposite.unloading:
+                        num_loop = len(crane.opposite.to_piles)
+                    else:
+                        num_loop = 1
+
+            cnt = 0
+            while cnt < num_loop:
                 avoidance, safety_xcoord = self.check_interference(crane)
                 if avoidance:
                     crane.safety_xcoord = safety_xcoord
@@ -551,7 +566,7 @@ class Management:
                     # if (crane.opposite.avoiding_event is not None) and (not crane.opposite.avoiding_event.triggered):
                     #     crane.opposite.avoiding_event.succeed()
 
-                    break
+                cnt += 1
 
             if crane.loading:
                 plate_name = crane.get_plate(self.piles[location])
