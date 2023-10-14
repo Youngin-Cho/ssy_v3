@@ -211,7 +211,8 @@ class Management:
     def __init__(self, df_storage, df_reshuffle, df_retrieval,
                  max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
                  input_points=(1,), output_points=(23, 27, 44),
-                 working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5, record_events=False):
+                 working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5,
+                 multi_num=3, multi_w=20.0, multi_dis=2, record_events=False):
         self.df_storage = df_storage
         self.df_reshuffle = df_reshuffle
         self.df_retrieval = df_retrieval
@@ -225,9 +226,9 @@ class Management:
         self.safety_margin = safety_margin
         self.record_events = record_events
 
-        self.multi_weight = 20.0
-        self.multi_num = 3
-        self.multi_dist = 2
+        self.multi_num = multi_num
+        self.multi_w = multi_w
+        self.multi_dist = multi_dis
 
         self.env, self.piles, self.conveyors, self.cranes, self.monitor = self._modeling()
         self.move_list = list(df_storage["pileno"].values) + list(df_reshuffle["pileno"].values)
@@ -411,7 +412,7 @@ class Management:
                                 (crane.name == "Crane-2" and target_coord[0] >= 1 + self.safety_margin)):
                             if (abs(target_coord[0] - self.piles[current_to_pile].coord[0]) <= self.multi_dist
                                     and target_coord[1] == self.piles[current_to_pile].coord[1]):
-                                if weight + candidate_plate.w <= self.multi_weight:
+                                if weight + candidate_plate.w <= self.multi_w:
                                     possible_action.append(pile)
 
             intersection = list(set(same_to_pile) & set(possible_action))

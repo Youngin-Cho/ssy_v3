@@ -11,7 +11,7 @@ from environment.simulation import Management
 class SteelStockYard:
     def __init__(self, data_src, look_ahead=2, max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
                  input_points=(1,), output_points=(23, 27, 44), working_crane_ids=("Crane-1", "Crane-2"),
-                 safety_margin=5, record_events=False):
+                 safety_margin=5, multi_num=3, multi_w=20.0, multi_dis=2, record_events=False):
 
         self.data_src = data_src
         self.look_ahead = look_ahead
@@ -23,6 +23,9 @@ class SteelStockYard:
         self.output_points = output_points
         self.working_crane_ids = working_crane_ids
         self.safety_margin = safety_margin
+        self.multi_num = multi_num
+        self.multi_w = multi_w
+        self.multi_dis = multi_dis
         self.record_events = record_events
 
         if type(self.data_src) is DataGenerator:
@@ -45,7 +48,9 @@ class SteelStockYard:
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
                                 max_x=self.max_x, max_y=self.max_y, row_range=self.row_range, bay_range=self.bay_range,
                                 input_points=self.input_points, output_points=self.output_points,
-                                working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin)
+                                working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin,
+                                multi_num=self.multi_num, multi_w=self.multi_w, multi_dis=self.multi_dis,
+                                record_events=self.record_events)
 
         self.action_mapping = {i + 1: pile_name for i, pile_name in enumerate(self.model.piles.keys())}
         self.action_mapping_inverse = {y: x for x, y in self.action_mapping.items()}

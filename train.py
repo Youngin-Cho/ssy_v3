@@ -87,6 +87,10 @@ if __name__ == "__main__":
         working_crane_ids = working_crane_ids + ("Crane-2", )
     safety_margin = cfg.safety_margin
 
+    multi_num = cfg.multi_num
+    multi_w = cfg.multi_w
+    multi_dis = cfg.multi_dis
+
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
     save_every = cfg.save_every
@@ -141,7 +145,8 @@ if __name__ == "__main__":
     env = SteelStockYard(data_src, look_ahead=look_ahead,
                          max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                          input_points=input_points, output_points=output_points,
-                         working_crane_ids=working_crane_ids, safety_margin=safety_margin, record_events=record_events)
+                         working_crane_ids=working_crane_ids, safety_margin=safety_margin,
+                         multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis, record_events=record_events)
 
     agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead, n_units,
                   capacity, alpha, beta_start, beta_steps,
