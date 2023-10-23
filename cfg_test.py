@@ -22,6 +22,10 @@ def get_cfg():
     parser.add_argument("--is_crane2_working", type=bool, default=True, help="Crane-2 is working")
     parser.add_argument("--safety_margin", type=int, default=5, help="safety margin between cranes")
 
+    parser.add_argument("--multi_num", type=int, default=3, help="Number of plates allowed for multi-loading")
+    parser.add_argument("--multi_w", type=int, default=20.0, help="Total weight of plates allowed for multi-loading")
+    parser.add_argument("--multi_dis", type=int, default=2, help="Distance allowed for multi-loading")
+
     parser.add_argument("--n_units", type=int, default=256, help="number of units in hidden layers of IQN")
     parser.add_argument("--algorithm", type=str, default="ALL", help="test algorithm")
     parser.add_argument("--random_seed", type=int, default=42, help="random seed")

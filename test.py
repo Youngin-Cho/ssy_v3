@@ -1,5 +1,5 @@
 import os
-import vessl
+# import vessl
 import time
 import string
 import torch
@@ -16,7 +16,7 @@ from cfg_test import *
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
+    # vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
     model_path = cfg.model_path
     data_dir = cfg.data_dir
@@ -48,9 +48,13 @@ if __name__ == "__main__":
         working_crane_ids = working_crane_ids + ("Crane-2",)
     safety_margin = cfg.safety_margin
 
-    simulation_dir = './output/test/simulation/case0/'
-    if not os.path.exists(simulation_dir):
-        os.makedirs(simulation_dir)
+    multi_num = cfg.multi_num
+    multi_w = cfg.multi_w
+    multi_dis = cfg.multi_dis
+
+    # simulation_dir = './output/test/simulation/case0/'
+    # if not os.path.exists(simulation_dir):
+    #     os.makedirs(simulation_dir)
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -81,7 +85,8 @@ if __name__ == "__main__":
             env = SteelStockYard(data_dir + path, look_ahead=look_ahead,
                                  max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                                  input_points=input_points, output_points=output_points,
-                                 working_crane_ids=working_crane_ids, safety_margin=safety_margin, record_events=True)
+                                 working_crane_ids=working_crane_ids, safety_margin=safety_margin,
+                                 multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis, record_events=True)
 
             if name == "RL":
                 device = torch.device("cpu")
@@ -119,8 +124,8 @@ if __name__ == "__main__":
 
                 if done:
                     finish = time.time()
-                    log = env.get_logs(simulation_dir + 'log_{0}_{1}.csv'.format(name, prob))
-                    # log = env.get_logs()
+                    # log = env.get_logs(simulation_dir + 'log_{0}_{1}.csv'.format(name, prob))
+                    log = env.get_logs()
                     makespan = log["Time"].max()
                     for crane_name in env.model.reward_info.keys():
                         empty_travel_time += env.model.reward_info[crane_name]["Empty Travel Time Cumulative"]

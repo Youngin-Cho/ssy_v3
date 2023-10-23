@@ -91,6 +91,7 @@ class SteelStockYard:
                                 max_x=self.max_x, max_y=self.max_y, row_range=self.row_range, bay_range=self.bay_range,
                                 input_points=self.input_points, output_points=self.output_points,
                                 working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin,
+                                multi_num=self.multi_num, multi_w=self.multi_w, multi_dis=self.multi_dis,
                                 record_events=self.record_events)
         while True:
             if self.model.decision_time:

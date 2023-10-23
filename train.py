@@ -1,4 +1,5 @@
 import os
+import json
 import vessl
 import torch
 import string
@@ -21,7 +22,8 @@ def evaluate(validation_dir):
         test_env = SteelStockYard(data_src, look_ahead=look_ahead,
                                   max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                                   input_points=input_points, output_points=output_points,
-                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin)
+                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin,
+                                  multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis, record_events=False)
 
         state, info = test_env.reset()
         crane_in_decision = info["crane_id"]
@@ -35,8 +37,8 @@ def evaluate(validation_dir):
             crane_in_decision = info["crane_id"]
 
             if done:
-                log = test_env.get_logs()
                 makespan = test_env.model.env.now / test_env.model.num_plates_cum
+                # log = test_env.get_logs()
                 # makespan = log["Time"].max() / len(log["Event"] == "Pick_up")
                 makespans.append(makespan)
                 break
@@ -119,6 +121,10 @@ if __name__ == "__main__":
         os.makedirs(log_dir)
 
     validation_dir = './input/data/validation_without_retrieval/'
+
+    with open(log_dir + "parameters.json", 'w') as f:
+        json.dump(vars(cfg), f, indent=4)
+
 
     data_src = DataGenerator(rows=tuple(i for i in string.ascii_uppercase[:cfg.n_rows]),
                              storage=storage,
