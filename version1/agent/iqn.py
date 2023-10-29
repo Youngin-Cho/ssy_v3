@@ -5,9 +5,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from torch_geometric.data import Batch
-from torch.optim.lr_scheduler import CyclicLR, StepLR
+from torch.optim.lr_scheduler import StepLR
 from collections import deque
-from agent.network import Network
+from version2.agent.network import Network
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device('mps:0' if torch.backends.mps.is_available() else 'cpu')
@@ -95,7 +95,7 @@ class PrioritizedReplay(object):
 
 
 class Agent():
-    def __init__(self, state_size, action_size, meta_data, look_ahead=2, n_units=256,
+    def __init__(self, state_size, action_size, meta_data, num_nodes, look_ahead=2, n_units=256,
                  capacity=1000, alpha=0.6, beta_start=0.4, beta_steps=100000, n_step=3, batch_size=64,
                  lr=0.0000001, lr_step=2000, lr_decay=0.9, tau=0.001, gamma=0.9, N=8):
         self.state_size = state_size
@@ -112,8 +112,8 @@ class Agent():
         self.last_action = None
 
         # IQN-Network
-        self.qnetwork_local = Network(state_size, action_size, meta_data, look_ahead, n_units, N).to(device)
-        self.qnetwork_target = Network(state_size, action_size, meta_data, look_ahead, n_units, N).to(device)
+        self.qnetwork_local = Network(state_size, action_size, meta_data, num_nodes, look_ahead, n_units, N).to(device)
+        self.qnetwork_target = Network(state_size, action_size, meta_data, num_nodes, look_ahead, n_units, N).to(device)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 
         self.optimizer = optim.RAdam(self.qnetwork_local.parameters(), lr=lr)

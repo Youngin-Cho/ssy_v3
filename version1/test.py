@@ -1,17 +1,12 @@
-import os
 import vessl
 import time
 import string
-import torch
-import random
-import numpy as np
-import pandas as pd
 
-from agent.iqn import *
+from version1.agent.iqn import *
 from benchmark.heuristics import *
-from environment.data import *
-from environment.env import *
-from cfg_test import *
+from version1.environment.data import *
+from version1.environment.env import *
+from version1.cfg_test import *
 
 
 if __name__ == "__main__":

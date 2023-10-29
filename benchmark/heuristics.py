@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from utilities import get_coord, get_moving_time
+from version1.utilities import get_coord, get_moving_time
 
 
 def minimize_avoiding_time(state, possible_actions, crane_id=1):

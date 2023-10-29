@@ -50,11 +50,12 @@ class NoisyLinear(nn.Linear):
 
 
 class Network(nn.Module):
-    def __init__(self, state_size, action_size, meta_data, look_ahead, n_units, N):
+    def __init__(self, state_size, action_size, meta_data, num_nodes, look_ahead, n_units, N):
         super(Network, self).__init__()
         self.state_size = state_size
         self.action_size = action_size
         self.meta_data = meta_data
+        self.num_nodes = num_nodes
         self.look_ahead = look_ahead
 
         self.n_units = n_units

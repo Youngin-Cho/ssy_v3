@@ -1,10 +1,7 @@
 import os
 import random
-import itertools
 import numpy as np
 import pandas as pd
-
-from utilities import get_coord
 
 
 def read_data(file_name, bay=1, num_crane=1):

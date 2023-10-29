@@ -129,7 +129,7 @@ class Crane:
             else:
                 y_moving_time = abs(self.target_coord[1] - self.current_coord[1]) / self.y_velocity
         moving_time = max(x_moving_time, y_moving_time)
-        return moving_time
+        return int(moving_time)
 
     def update_location(self, time, on_pile=False):
         x_coord = self.current_coord[0]
@@ -307,8 +307,8 @@ class Management:
 
         cranes = PriorityFilterStore(env)
 
-        crane1 = Crane(env, 'Crane-1', 1, self.safety_margin, 8.0, (2, 1))
-        crane2 = Crane(env, 'Crane-2', 2, self.safety_margin, 8.0, (self.max_x - 1, 1))
+        crane1 = Crane(env, 'Crane-1', 0, self.safety_margin, 8.0, (2, 1))
+        crane2 = Crane(env, 'Crane-2', 1, self.safety_margin, 8.0, (self.max_x - 1, 1))
 
         crane1.opposite = crane2
         crane2.opposite = crane1
@@ -329,7 +329,7 @@ class Management:
             # request a crane
             crane = yield self.cranes.get(priority=3, filt=lambda x: True)
             self.crane_in_decision = crane
-            if self.crane_in_decision.id == 1:
+            if self.crane_in_decision.id == 0:
                 self.crane1_decision_time = self.env.now
             else:
                 self.crane2_decision_time = self.env.now
@@ -573,6 +573,7 @@ class Management:
 
                 cnt += 1
 
+            assert self.location_mapping[crane.current_coord].name == location
             if crane.loading:
                 plate_name = crane.get_plate(self.location_mapping[crane.current_coord])
                 if self.monitor.record_events:

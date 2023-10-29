@@ -1,16 +1,14 @@
 import os
 import json
-import vessl
+# import vessl
 import torch
 import string
-import numpy as np
-import pandas as pd
 
-from cfg_train import get_cfg
+from version1.cfg_train import get_cfg
 # from torch.utils.tensorboard import SummaryWriter
-from agent.iqn import Agent
-from environment.data import DataGenerator
-from environment.env import SteelStockYard
+from version1.agent.iqn import Agent
+from version1.environment.data import DataGenerator
+from version1.environment.env import SteelStockYard
 
 
 def evaluate(validation_dir):
@@ -48,7 +46,7 @@ def evaluate(validation_dir):
 
 if __name__ == "__main__":
     cfg = get_cfg()
-    vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
+    # vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
     look_ahead = cfg.look_ahead
     record_events = cfg.record_events
@@ -120,7 +118,7 @@ if __name__ == "__main__":
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    validation_dir = './input/data/validation_without_retrieval/'
+    validation_dir = '../input/data/validation_without_retrieval/'
 
     with open(log_dir + "parameters.json", 'w') as f:
         json.dump(vars(cfg), f, indent=4)
@@ -154,7 +152,7 @@ if __name__ == "__main__":
                          working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                          multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis, record_events=record_events)
 
-    agent = Agent(env.state_size, env.action_size, env.meta_data, look_ahead, n_units,
+    agent = Agent(env.state_size, env.action_size, env.meta_data, env.num_nodes, look_ahead, n_units,
                   capacity, alpha, beta_start, beta_steps,
                   n_step, batch_size, lr, lr_step, lr_decay, tau, gamma, N)
     # writer = SummaryWriter(log_dir)
@@ -198,9 +196,9 @@ if __name__ == "__main__":
                 loss_avg = sum(loss_list) / len(loss_list)
                 print("episode: %d | total_rewards: %.2f | loss: %.2f" % (episode, reward_tot, loss_avg))
 
-                vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
-                vessl.log(payload={"Reward": reward_tot}, step=episode)
-                vessl.log(payload={"Loss": loss_avg}, step=episode)
+                # vessl.log(payload={"LearnigRate": agent.scheduler.get_last_lr()[0]}, step=episode)
+                # vessl.log(payload={"Reward": reward_tot}, step=episode)
+                # vessl.log(payload={"Loss": loss_avg}, step=episode)
                 # writer.add_scalar("Training/Epsilon", eps, episode)
                 # writer.add_scalar("Training/Reward", reward_tot, episode)
                 # writer.add_scalar("Training/Loss", loss_avg, episode)

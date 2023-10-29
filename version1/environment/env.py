@@ -1,11 +1,10 @@
 import torch
-import random
 import numpy as np
 import pandas as pd
 
 from torch_geometric.data import HeteroData, Data
-from environment.data import DataGenerator
-from environment.simulation import Management
+from version1.environment.data import DataGenerator
+from version1.environment.simulation import Management
 
 
 class SteelStockYard:
@@ -35,14 +34,6 @@ class SteelStockYard:
             self.df_reshuffle = pd.read_excel(self.data_src, sheet_name="reshuffle", engine="openpyxl")
             self.df_retrieval = pd.read_excel(self.data_src, sheet_name="retrieval", engine="openpyxl")
 
-        self.action_size = 2 * 40 + 2 + 1
-        self.state_size = {"crane": 2, "pile": 1 + 1 * look_ahead}
-        self.meta_data = (["crane", "pile"],
-                          [("crane", "interfering", "crane"),
-                           ("pile", "moving_rev", "crane"),
-                           ("crane", "moving", "pile"),
-                           ("pile", "stacking", "pile")])
-
         self.crane_list = ["Crane-1", "Crane-2"]
         self.pile_list = list(self.df_storage["pileno"].unique()) + list(self.df_reshuffle["pileno"].unique())
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
@@ -51,6 +42,15 @@ class SteelStockYard:
                                 working_crane_ids=self.working_crane_ids, safety_margin=self.safety_margin,
                                 multi_num=self.multi_num, multi_w=self.multi_w, multi_dis=self.multi_dis,
                                 record_events=self.record_events)
+
+        self.action_size = 2 * 40 + 2 + 1
+        self.state_size = {"crane": 2, "pile": 1 + 1 * look_ahead}
+        self.meta_data = (["crane", "pile"],
+                          [("crane", "interfering", "crane"),
+                           ("pile", "moving_rev", "crane"),
+                           ("crane", "moving", "pile"),
+                           ("pile", "stacking", "pile")])
+        self.num_nodes = {"crane": len(self.crane_list), "pile": len(self.pile_list)}
 
         self.action_mapping = {i + 1: pile_name for i, pile_name in enumerate(self.model.piles.keys())}
         self.action_mapping_inverse = {y: x for x, y in self.action_mapping.items()}
@@ -115,13 +115,13 @@ class SteelStockYard:
             from_pile_x = self.model.piles[from_pile_name].coord[0]
             to_pile_x = self.model.piles[to_pile_name].coord[0]
 
-            if self.crane_in_decision == 1 and from_pile_x > self.max_x - self.safety_margin:
+            if self.crane_in_decision == 0 and from_pile_x > self.max_x - self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 2 and from_pile_x < 1 + self.safety_margin:
+            if self.crane_in_decision == 1 and from_pile_x < 1 + self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 1 and to_pile_x > self.max_x - self.safety_margin:
+            if self.crane_in_decision == 0 and to_pile_x > self.max_x - self.safety_margin:
                 possible = False
-            if self.crane_in_decision == 2 and to_pile_x < 1 + self.safety_margin:
+            if self.crane_in_decision == 1 and to_pile_x < 1 + self.safety_margin:
                 possible = False
             if from_pile_name in self.model.blocked_piles:
                 possible = False
