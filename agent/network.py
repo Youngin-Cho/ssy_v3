@@ -50,7 +50,7 @@ class Scheduler(nn.Module):
             else:
                 self.critic.append(nn.Linear(embed_dim, 1))
 
-    def act(self, state, current_plates, mask, greedy=False):
+    def act(self, state, mask, greedy=False):
         x_dict, edge_index_dict = state.x_dict, state.edge_index_dict
 
         for i in range(self.num_HGT_layers):
@@ -103,7 +103,7 @@ class Scheduler(nn.Module):
 
         return action.item(), action_logprob.item(), state_value.squeeze().item()
 
-    def evaluate(self, batch_state, batch_action, batch_current_plates, batch_mask):
+    def evaluate(self, batch_state, batch_action, batch_mask):
         batch_size = batch_state.num_graphs
         x_dict, edge_index_dict = batch_state.x_dict, batch_state.edge_index_dict
 

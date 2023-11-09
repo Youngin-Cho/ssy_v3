@@ -51,7 +51,7 @@ class Agent:
             = [], [], [], [], [], [], [], []
 
         for i, transition in enumerate(self.data):
-            s, a, r, s_prime, a_logprob, v, current_plates, mask, done = transition
+            s, a, r, s_prime, a_logprob, v, mask, done = transition
 
             s_lst.append(s)
             a_lst.append([a])
@@ -85,10 +85,10 @@ class Agent:
 
         return s, a, r, s_prime, a_logprob, v, mask, done
 
-    def get_action(self, s, current_plates, mask):
+    def get_action(self, s, mask):
         self.network.eval()
         with torch.no_grad():
-            a = self.network.act(s, current_plates, mask)
+            a = self.network.act(s, mask)
         return a
 
     def train(self):

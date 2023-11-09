@@ -210,7 +210,7 @@ if __name__ == "__main__":
         while not done:
             for t in range(T_horizon):
                 action, action_logprob, state_value = agent.get_action(state, mask)
-                next_state, reward, done, next_current_ops, next_mask = env.step(action)
+                next_state, reward, done, next_mask = env.step(action)
 
                 agent.put_data((state, action, reward, next_state, action_logprob, state_value, mask, done))
                 state = next_state
