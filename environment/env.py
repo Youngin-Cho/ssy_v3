@@ -139,7 +139,7 @@ class SteelStockYard:
         for crane_name in self.model.reward_info.keys():
             empty_travel_time += self.model.reward_info[crane_name]["Empty Travel Time"]
             avoiding_time += self.model.reward_info[crane_name]["Avoiding Time"]
-            # waiting_time += self.model.reward_info[crane_name]["Waiting Time"]
+            waiting_time += self.model.reward_info[crane_name]["Waiting Time"]
 
         if self.model.env.now != self.time:
             reward = - (empty_travel_time + avoiding_time + waiting_time) / (2 * (self.model.env.now - self.time))
