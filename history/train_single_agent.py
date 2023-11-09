@@ -2,8 +2,8 @@ import os
 import vessl
 import pandas as pd
 
-from cfg_train import get_cfg
-from agent.iqn import *
+from version1.cfg_train import get_cfg
+from version1.agent.iqn import *
 from history.multi_process import *
 
 

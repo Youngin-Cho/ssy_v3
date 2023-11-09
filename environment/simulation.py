@@ -240,7 +240,9 @@ class Management:
         self.last_action = None
         self.waiting_crane = None
         self.state_info = {crane.name: {"Current Coord": crane.current_coord,
-                                        "Target Coord": (-1.0, -1.0)} for crane in self.cranes.items}
+                                        "Target Coord": (-1.0, -1.0),
+                                        "Idle": True,
+                                        "Locations": []} for crane in self.cranes.items}
         self.reward_info = {crane.name: {"Empty Travel Time": 0.0,
                                          "Avoiding Time": 0.0,
                                          "Waiting Time": 0.0,
@@ -261,7 +263,7 @@ class Management:
         self.do_action = self.env.event()
 
         self.action = self.env.process(self.run())
-        if df_retrieval is not None:
+        if len(df_retrieval) > 0:
             self.action_conveyor = [self.env.process(self.release(cn)) for cn in self.conveyors.values()]
 
     def _modeling(self):
@@ -336,9 +338,23 @@ class Management:
 
             self.state_info[crane.name]["Current Coord"] = crane.current_coord
             self.state_info[crane.name]["Target Coord"] = crane.target_coord
+            self.state_info[crane.name]["Idle"] = crane.idle
+            if crane.loading:
+                self.state_info[crane.name]["Locations"] = crane.from_piles
+            elif crane.unloading:
+                self.state_info[crane.name]["Locations"] = crane.to_piles
+            else:
+                self.state_info[crane.name]["Locations"] = []
             if crane.opposite.name in self.working_crane_ids:
                 self.state_info[crane.opposite.name]["Current Coord"] = crane.opposite.current_coord
                 self.state_info[crane.opposite.name]["Target Coord"] = crane.opposite.target_coord
+                self.state_info[crane.opposite.name]["Idle"] = crane.opposite.idle
+                if crane.opposite.loading:
+                    self.state_info[crane.opposite.name]["Locations"] = crane.opposite.from_piles
+                elif crane.unloading:
+                    self.state_info[crane.oppoiste.name]["Locations"] = crane.opposite.to_piles
+                else:
+                    self.state_info[crane.opposite.name]["Locations"] = []
 
             # 크레인 대기 시간 기록
             self.reward_info[crane.name]["Waiting Time"] \

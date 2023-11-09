@@ -4,7 +4,7 @@ import pandas as pd
 
 from history.cfg import get_cfg
 from torch.utils.tensorboard import SummaryWriter
-from agent.iqn import *
+from version1.agent.iqn import *
 from history.multi_process import *
 
 

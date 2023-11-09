@@ -2,20 +2,24 @@ import argparse
 
 
 def get_cfg():
-    parser = argparse.ArgumentParser()
 
+    parser = argparse.ArgumentParser(description="")
+
+    parser.add_argument("--vessl", type=int, default=1, help="whether to use vessl (0: False, 1:True)")
+
+    parser.add_argument("--n_episode", type=int, default=10000, help="number of episodes")
     parser.add_argument("--load_model", type=bool, default=False, help="load the trained model")
     parser.add_argument("--model_path", type=str, default=None, help="model file path")
 
     parser.add_argument("--look_ahead", type=int, default=2, help="number of steel plates included in states")
-    parser.add_argument("--record_events", type=bool, default=False, help="Whether to record events")
+    parser.add_argument("--record_events", type=int, default=0, help="Whether to record events")
 
     # 데이터 생성 관련 파라미터
     parser.add_argument("--n_rows", type=int, default=2, help="steel plates data for storage")
 
-    parser.add_argument("--storage", type=bool, default=True, help="steel plates data for storage")
-    parser.add_argument("--reshuffle", type=bool, default=True, help="steel plates data for reshuffle")
-    parser.add_argument("--retrieval", type=bool, default=True, help="steel plates data for retrieval")
+    parser.add_argument("--storage", type=int, default=1, help="steel plates data for storage")
+    parser.add_argument("--reshuffle", type=int, default=1, help="steel plates data for reshuffle")
+    parser.add_argument("--retrieval", type=int, default=1, help="steel plates data for retrieval")
 
     parser.add_argument("--n_bays_in_area1", type=int, default=15, help="number of bays in Area1")
     parser.add_argument("--n_bays_in_area2", type=int, default=6, help="number of bays in Area2")
@@ -44,29 +48,27 @@ def get_cfg():
     parser.add_argument("--multi_w", type=int, default=20.0, help="Total weight of plates allowed for multi-loading")
     parser.add_argument("--multi_dis", type=int, default=2, help="Distance allowed for multi-loading")
 
-    # 알고리즘 파라미터
-    parser.add_argument("--n_episode", type=int, default=10000, help="Number of episodes to train")
-    parser.add_argument("--eval_every", type=int, default=200, help="Evaluate every x episodes")
+    parser.add_argument("--embed_dim", type=int, default=128, help="node embedding dimension")
+    parser.add_argument("--num_heads", type=int, default=4, help="multi-head attention in HGT layers")
+    parser.add_argument("--num_HGT_layers", type=int, default=2, help="number of HGT layers")
+    parser.add_argument("--num_actor_layers", type=int, default=2, help="number of actor layers")
+    parser.add_argument("--num_critic_layers", type=int, default=2, help="number of critic layers")
+    parser.add_argument("--lr", type=float, default=1e-4, help="learning rate")
+    parser.add_argument("--lr_decay", type=float, default=0.9, help="learning rate decay ratio")
+    parser.add_argument("--lr_step", type=int, default=2000, help="step size to reduce learning rate")
+    parser.add_argument("--gamma", type=float, default=0.98, help="discount ratio")
+    parser.add_argument("--lmbda", type=float, default=0.95, help="GAE parameter")
+    parser.add_argument("--eps_clip", type=float, default=0.2, help="clipping paramter")
+    parser.add_argument("--K_epoch", type=int, default=5, help="optimization epoch")
+    parser.add_argument("--T_horizon", type=int, default=10, help="the number of steps to obtain samples")
+    parser.add_argument("--P_coeff", type=float, default=1, help="coefficient for policy loss")
+    parser.add_argument("--V_coeff", type=float, default=0.5, help="coefficient for value loss")
+    parser.add_argument("--E_coeff", type=float, default=0.01, help="coefficient for entropy loss")
+
+    parser.add_argument("--eval_every", type=int, default=100, help="Evaluate every x episodes")
     parser.add_argument("--save_every", type=int, default=1000, help="Save a model every x episodes")
     parser.add_argument("--new_instance_every", type=int, default=10, help="Generate new scenarios every x episodes")
-    parser.add_argument("--n_units", type=int, default=128, help="Number of units in hidden layers of IQN")
-    parser.add_argument("--n_step", type=int, default=3, help="Multistep IQN")
-    parser.add_argument("--capacity", type=int, default=1000, help="Replay memory size")
-    parser.add_argument("--alpha", type=float, default=0.6, help="Control paramter for priorizted sampling")
-    parser.add_argument("--beta_start", type=float, default=0.4, help="Correction parameter for importance sampling")
-    parser.add_argument("--beta_steps", type=int, default=1500000, help="Total number of steps for annealing")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size for updating the DQN")
-    parser.add_argument("--N", type=int, default=16, help="Number of Quantiles")
-    # parser.add_argument("--base_lr", type=float, default=0.0000001, help="Minimum learning rate")
-    # parser.add_argument("--max_lr", type=float, default=0.0001, help="Maximum learning rate")
-    # parser.add_argument("--step_size_up", type=int, default=300, help="Number of episodes increasing learning rate")
-    # parser.add_argument("--step_size_down", type=int, default=700, help="Number of episodes decreasing learning rate")
-    parser.add_argument("--lr", type=float, default=0.00001, help="Learning rate")
-    parser.add_argument("--lr_step", type=int, default=2500, help="Step size to reduce learning rate")
-    parser.add_argument("--lr_decay", type=float, default=0.9, help="Learning rate decay ratio")
-    parser.add_argument("--gamma", type=float, default=0.95, help="Discount factor gamma")
-    parser.add_argument("--tau", type=float, default=0.001, help="Soft update parameter tau")
 
-    args = parser.parse_args()
+    parser.add_argument("--val_dir", type=str, default=None, help="directory where the validation data are stored")
 
-    return args
+    return parser.parse_args()

@@ -1,10 +1,9 @@
 import torch
-import random
 import numpy as np
 
 from torch_geometric.data import HeteroData
-from environment.data import generate_data
-from environment.simulation import Management
+from version1.environment.data import generate_data
+from version1.environment.simulation import Management
 
 
 class SteelStockYard(object):
