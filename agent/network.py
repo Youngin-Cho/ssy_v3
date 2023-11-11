@@ -35,20 +35,20 @@ class Scheduler(nn.Module):
         self.actor = nn.ModuleList()
         for i in range(num_actor_layers):
             if i == 0:
-                self.actor.append(nn.Linear(embed_dim * 4, embed_dim))
+                self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
             elif 0 < i < num_actor_layers - 1:
-                self.actor.append(nn.Linear(embed_dim, embed_dim))
+                self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
             else:
-                self.actor.append(nn.Linear(embed_dim, 1))
+                self.actor.append(nn.Linear(embed_dim * 4, 1))
 
         self.critic = nn.ModuleList()
         for i in range(num_critic_layers):
             if i == 0:
-                self.critic.append(nn.Linear(embed_dim * 2, embed_dim))
+                self.critic.append(nn.Linear(embed_dim * 2, embed_dim * 2))
             elif i < num_critic_layers - 1:
-                self.critic.append(nn.Linear(embed_dim, embed_dim))
+                self.critic.append(nn.Linear(embed_dim * 2, embed_dim * 2))
             else:
-                self.critic.append(nn.Linear(embed_dim, 1))
+                self.critic.append(nn.Linear(embed_dim * 2, 1))
 
     def act(self, state, mask, greedy=False):
         x_dict, edge_index_dict = state.x_dict, state.edge_index_dict
