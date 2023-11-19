@@ -17,8 +17,8 @@ def get_cfg():
     parser.add_argument("--n_bays_in_area5", type=int, default=9, help="number of bays in Area5")
     parser.add_argument("--n_bays_in_area6", type=int, default=1, help="number of bays in Area6")
 
-    parser.add_argument("--is_crane1_working", type=bool, default=True, help="Crane-1 is working")
-    parser.add_argument("--is_crane2_working", type=bool, default=True, help="Crane-2 is working")
+    parser.add_argument("--is_crane1_working", type=int, default=1, help="Crane-1 is working")
+    parser.add_argument("--is_crane2_working", type=int, default=1, help="Crane-2 is working")
     parser.add_argument("--safety_margin", type=int, default=5, help="safety margin between cranes")
 
     parser.add_argument("--multi_num", type=int, default=3, help="Number of plates allowed for multi-loading")

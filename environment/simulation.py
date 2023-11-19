@@ -233,22 +233,23 @@ class Management:
         self.multi_w = multi_w
         self.multi_dist = multi_dis
 
+        self.initial_coord = {"Crane-1": (2, 1), "Crane-2": (self.max_x - 1, 1)}
         self.env, self.piles, self.conveyors, self.cranes, self.monitor = self._modeling()
         self.move_list = list(df_storage["pileno"].values) + list(df_reshuffle["pileno"].values)
         self.num_plates_cum = 0
         self.blocked_piles = list()
         self.last_action = None
         self.waiting_crane = None
-        self.state_info = {crane.name: {"Current Coord": crane.current_coord,
+        self.state_info = {crane_name: {"Current Coord": self.initial_coord[crane_name],
                                         "Target Coord": (-1.0, -1.0),
                                         "Idle": True,
-                                        "Locations": []} for crane in self.cranes.items}
-        self.reward_info = {crane.name: {"Empty Travel Time": 0.0,
+                                        "Locations": []} for crane_name in ["Crane-1", "Crane-2"]}
+        self.reward_info = {crane_name: {"Empty Travel Time": 0.0,
                                          "Avoiding Time": 0.0,
                                          "Waiting Time": 0.0,
                                          "Empty Travel Time Cumulative": 0.0,
                                          "Avoiding Time Cumulative": 0.0,
-                                         "Waiting Time Cumulative": 0.0} for crane in self.cranes.items}
+                                         "Waiting Time Cumulative": 0.0} for crane_name in ["Crane-1", "Crane-2"]}
 
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()}  # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
@@ -309,8 +310,8 @@ class Management:
 
         cranes = PriorityFilterStore(env)
 
-        crane1 = Crane(env, 'Crane-1', 0, self.safety_margin, 8.0, (2, 1))
-        crane2 = Crane(env, 'Crane-2', 1, self.safety_margin, 8.0, (self.max_x - 1, 1))
+        crane1 = Crane(env, 'Crane-1', 0, self.safety_margin, 8.0, self.initial_coord["Crane-1"])
+        crane2 = Crane(env, 'Crane-2', 1, self.safety_margin, 8.0, self.initial_coord["Crane-2"])
 
         crane1.opposite = crane2
         crane2.opposite = crane1

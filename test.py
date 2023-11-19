@@ -47,9 +47,9 @@ if __name__ == "__main__":
                      1 + n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + 2,
                      1 + n_bays_in_area1 + n_bays_in_area2 + n_bays_in_area3 + n_bays_in_area4 + n_bays_in_area5 + n_bays_in_area6 + 3)
     working_crane_ids = tuple()
-    if cfg.is_crane1_working:
+    if bool(cfg.is_crane1_working):
         working_crane_ids = working_crane_ids + ("Crane-1",)
-    if cfg.is_crane2_working:
+    if bool(cfg.is_crane2_working):
         working_crane_ids = working_crane_ids + ("Crane-2",)
     safety_margin = cfg.safety_margin
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     test_paths = os.listdir(data_dir)
     index = ["P%d" % i for i in range(1, len(test_paths) + 1)] + ["avg"]
-    columns = ["RL", "SD", "MA", "MX"] if algorithm == "ALL" else [algorithm]
+    columns = ["RL", "SD", "MA", "MX", "RAND"] if algorithm == "ALL" else [algorithm]
     df_makespan = pd.DataFrame(index=index, columns=columns)
     df_empty_travel_time = pd.DataFrame(index=index, columns=columns)
     df_avoiding_time = pd.DataFrame(index=index, columns=columns)
