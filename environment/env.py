@@ -10,7 +10,8 @@ from environment.simulation import Management
 class SteelStockYard:
     def __init__(self, data_src, look_ahead=2, max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
                  input_points=(1,), output_points=(23, 27, 44), working_crane_ids=("Crane-1", "Crane-2"),
-                 safety_margin=5, multi_num=3, multi_w=20.0, multi_dis=2, rl=-True, record_events=False, device=None):
+                 safety_margin=5, multi_num=3, multi_w=20.0, multi_dis=2,
+                 reward_sig=0, rl=-True, record_events=False, device=None):
 
         self.data_src = data_src
         self.look_ahead = look_ahead
@@ -25,6 +26,7 @@ class SteelStockYard:
         self.multi_num = multi_num
         self.multi_w = multi_w
         self.multi_dis = multi_dis
+        self.reward_sig = reward_sig
         self.rl = rl
         self.record_events = record_events
         self.device = device
@@ -142,7 +144,14 @@ class SteelStockYard:
             waiting_time += self.model.reward_info[crane_name]["Waiting Time"]
 
         if self.model.env.now != self.time:
-            reward = - (empty_travel_time + avoiding_time + waiting_time) / (2 * (self.model.env.now - self.time))
+            if self.reward_sig == 0:
+                reward = - (empty_travel_time + avoiding_time + waiting_time) / (2 * (self.model.env.now - self.time))
+            elif self.reward_sig == 1:
+                reward = - empty_travel_time / (2 * (self.model.env.now - self.time))
+            elif self.reward_sig == 2:
+                reward = - avoiding_time / (2 * (self.model.env.now - self.time))
+            else:
+                reward = reward = - waiting_time / (2 * (self.model.env.now - self.time))
         else:
             reward = 0
 

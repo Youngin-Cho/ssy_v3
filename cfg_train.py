@@ -48,6 +48,8 @@ def get_cfg():
     parser.add_argument("--multi_w", type=int, default=20.0, help="Total weight of plates allowed for multi-loading")
     parser.add_argument("--multi_dis", type=int, default=2, help="Distance allowed for multi-loading")
 
+    parser.add_argument("--reward_sig", type=int, default=0, help="Reward function")
+
     parser.add_argument("--embed_dim", type=int, default=128, help="node embedding dimension")
     parser.add_argument("--num_heads", type=int, default=4, help="multi-head attention in HGT layers")
     parser.add_argument("--num_HGT_layers", type=int, default=2, help="number of HGT layers")

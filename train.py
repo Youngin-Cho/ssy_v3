@@ -23,7 +23,7 @@ def evaluate(val_dir):
                                       input_points=input_points, output_points=output_points,
                                       working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                       multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                      rl=True, record_events=False, device=device)
+                                      reward_sig=reward_sig, rl=True, record_events=False, device=device)
 
             state, mask = test_env.reset()
             done = False
@@ -96,6 +96,8 @@ if __name__ == "__main__":
     multi_num = cfg.multi_num
     multi_w = cfg.multi_w
     multi_dis = cfg.multi_dis
+
+    reward_sig = cfg.reward_sig
 
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
@@ -173,7 +175,7 @@ if __name__ == "__main__":
                          input_points=input_points, output_points=output_points,
                          working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                          multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                         rl=True, record_events=record_events, device=device)
+                         reward_sig=reward_sig, rl=True, record_events=record_events, device=device)
 
     agent = Agent(env.meta_data, env.state_size, env.num_nodes, embed_dim, num_heads,
                   num_HGT_layers, num_actor_layers, num_critic_layers, lr, lr_decay, lr_step,
@@ -255,7 +257,7 @@ if __name__ == "__main__":
                                  input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                  multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                 rl=True, record_events=record_events, device=device)
+                                 reward_sig=reward_sig, rl=True, record_events=record_events, device=device)
 
     if cfg.vessl == 0:
         writer.close()
