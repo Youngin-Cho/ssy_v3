@@ -18,7 +18,7 @@ def evaluate(val_dir):
     with torch.no_grad():
         makespan_lst = []
         for path in val_paths:
-            test_env = SteelStockYard(data_src, look_ahead=look_ahead,
+            test_env = SteelStockYard(val_dir + path, look_ahead=look_ahead,
                                       max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                                       input_points=input_points, output_points=output_points,
                                       working_crane_ids=working_crane_ids, safety_margin=safety_margin,
@@ -120,10 +120,6 @@ if __name__ == "__main__":
     P_coeff = cfg.P_coeff
     V_coeff = cfg.V_coeff
     E_coeff = cfg.E_coeff
-
-    eval_every = cfg.eval_every
-    save_every = cfg.save_every
-    new_instance_every = cfg.new_instance_every
 
     val_dir = cfg.val_dir
 
