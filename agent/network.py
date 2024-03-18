@@ -28,9 +28,9 @@ class Scheduler(nn.Module):
         self.conv = nn.ModuleList()
         for i in range(self.num_HGT_layers):
             if i == 0:
-                self.conv.append(HGTConv(self.state_size, embed_dim, meta_data, head=num_heads))
+                self.conv.append(HGTConv(self.state_size, embed_dim, meta_data, heads=num_heads))
             else:
-                self.conv.append(HGTConv(embed_dim, embed_dim, meta_data, head=num_heads))
+                self.conv.append(HGTConv(embed_dim, embed_dim, meta_data, heads=num_heads))
 
         self.actor = nn.ModuleList()
         for i in range(num_actor_layers):
