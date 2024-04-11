@@ -52,7 +52,7 @@ if __name__ == "__main__":
     cfg = get_cfg()
     if cfg.vessl == 1:
         import vessl
-        vessl.init(organization="snu-eng-dgx", project="quay", hp=cfg)
+        vessl.init(organization="snu-eng-dgx", project="ssy", hp=cfg)
 
     look_ahead = cfg.look_ahead
     record_events = bool(cfg.record_events)
