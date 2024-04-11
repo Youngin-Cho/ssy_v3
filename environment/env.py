@@ -51,9 +51,10 @@ class SteelStockYard:
                                 record_events=self.record_events)
 
         self.action_size = len(self.pile_list) * len(self.crane_list)
-        self.state_size = {"crane": 2, "pile": 1 + 1 * look_ahead}
+        self.state_size = {"crane": 2, "pile": 1 + 2 * look_ahead}
         self.meta_data = (["crane", "pile"],
-                          [("pile", "moving_rev", "crane"),
+                          [("crane", "interference", "crane"),
+                           ("pile", "moving_rev", "crane"),
                            ("crane", "moving", "pile")])
         self.num_nodes = {"crane": len(self.crane_list), "pile": len(self.pile_list)}
 
@@ -163,7 +164,7 @@ class SteelStockYard:
         X_piles = np.zeros((self.num_nodes["pile"], self.state_size["pile"]))
         X_cranes = np.zeros((self.num_nodes["crane"], self.state_size["crane"]))
 
-        edge_pile_to_crane, edge_crane_to_pile = [[], []], [[], []]
+        edge_crane_to_crane, edge_pile_to_crane, edge_crane_to_pile = [[], []], [[], []], [[], []]
 
         mask_piles = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
         mask_cranes = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
@@ -203,9 +204,9 @@ class SteelStockYard:
                     plate = self.model.piles[from_pile_name].plates[-1-j]
                     to_pile_name = plate.to_pile
                     to_pile_x = self.model.piles[to_pile_name].coord[0]
-                    # weight = plate.w
-                    X_piles[i, 1 * j + 1] = to_pile_x / 44
-                    # node_features_for_pile[i, 2 * j + 2] = weight / 19.294
+                    weight = plate.w
+                    X_piles[i, 2 * j + 1] = to_pile_x / 44
+                    X_piles[i, 2 * j + 2] = weight / 19.294
 
                     if j == 0:
                         if (from_pile_x <= self.max_x - self.safety_margin) and (to_pile_x <= self.max_x - self.safety_margin):
@@ -217,6 +218,12 @@ class SteelStockYard:
         state['pile'].x = torch.tensor(X_piles, dtype=torch.float32).to(self.device)
 
         mask = mask_piles & mask_cranes & mask_eligibility
+
+        for i, crane_name in enumerate(self.crane_list):
+            for j, crane_name in enumerate(self.crane_list):
+                if i != j:
+                    edge_crane_to_crane[0].append(i)
+                    edge_crane_to_crane[1].append(j)
 
         for i, crane_name in enumerate(self.crane_list):
             for j, from_pile_name in enumerate(self.pile_list):
@@ -242,6 +249,7 @@ class SteelStockYard:
                     edge_pile_to_crane[0].append(j)
                     edge_pile_to_crane[1].append(i)
 
+        state['crane', 'interference', 'crane'].edge_index = torch.tensor(np.array(edge_crane_to_crane), dtype=torch.long).to(self.device)
         state['crane', 'moving', 'pile'].edge_index = torch.tensor(np.array(edge_crane_to_pile), dtype=torch.long).to(self.device)
         state['pile', 'moving_rev', 'crane'].edge_index = torch.tensor(np.array(edge_pile_to_crane), dtype=torch.long).to(self.device)
 
