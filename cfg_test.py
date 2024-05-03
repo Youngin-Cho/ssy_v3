@@ -26,7 +26,7 @@ def get_cfg():
     parser.add_argument("--multi_dis", type=int, default=2, help="Distance allowed for multi-loading")
 
     parser.add_argument("--algorithm", type=str, default="ALL", help="test algorithm")
-    parser.add_argument("--random_seed", type=int, default=42, help="random seed")
+    parser.add_argument("--random_seed", type=int, default=1, help="random seed")
     parser.add_argument("--record_events", type=int, default=0, help="Whether to record events")
 
     args = parser.parse_args()

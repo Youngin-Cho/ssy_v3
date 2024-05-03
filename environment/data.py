@@ -245,7 +245,7 @@ class DataGenerator:
             df_storage.to_excel(writer, sheet_name="storage", index=False)
             df_reshuffle.to_excel(writer, sheet_name="reshuffle", index=False)
             df_retrieval.to_excel(writer, sheet_name="retrieval", index=False)
-            writer.save()
+            writer.close()
 
         return df_storage, df_reshuffle, df_retrieval
 
@@ -266,7 +266,7 @@ if __name__ == '__main__':
 
     n_from_piles_storage = 1
     n_to_piles_storage = 5
-    n_from_piles_reshuffle = 10
+    n_from_piles_reshuffle = 12
     n_to_piles_reshuffle = 10
     n_from_piles_retrieval_cn1 = 5
     n_from_piles_retrieval_cn2 = 5
@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/data/validation/"
+    file_dir = "../input/data/test_v2/case1/high-%d-%d/" % (n_from_piles_reshuffle, n_to_piles_reshuffle)
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
@@ -306,7 +306,7 @@ if __name__ == '__main__':
                              working_crane_ids=working_crane_ids,
                              safety_margin=safety_margin)
 
-    iteration = 5
+    iteration = 50
     for i in range(1, iteration + 1):
         file_path = file_dir + "instance-{0}.xlsx".format(i)
         df_storage, df_reshuffle, df_retrieval = data_src.generate(file_path=file_path)

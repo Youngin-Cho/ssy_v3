@@ -11,7 +11,7 @@ class SteelStockYard:
     def __init__(self, data_src, look_ahead=2, max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
                  input_points=(1,), output_points=(23, 27, 44), working_crane_ids=("Crane-1", "Crane-2"),
                  safety_margin=5, multi_num=3, multi_w=20.0, multi_dis=2,
-                 reward_sig=0, rl=-True, record_events=False, device=None):
+                 parameter_sharing=True, team_reward=True, rl=True, record_events=False, device=None):
 
         self.data_src = data_src
         self.look_ahead = look_ahead
@@ -26,7 +26,8 @@ class SteelStockYard:
         self.multi_num = multi_num
         self.multi_w = multi_w
         self.multi_dis = multi_dis
-        self.reward_sig = reward_sig
+        self.parameter_sharing = parameter_sharing
+        self.team_reward = team_reward
         self.rl = rl
         self.record_events = record_events
         self.device = device
@@ -81,15 +82,12 @@ class SteelStockYard:
                         done = True
                         break
                     else:
-                        if len(self.model.env._queue) == 0:
-                            log = self.get_logs()
-                            print(0)
                         self.model.env.step()
 
             if self.rl:
-                next_state, mask = self._get_state()
+                next_state, mask, crane_id = self._get_state()
             else:
-                next_state, mask = self._get_state_for_heuristics()
+                next_state, mask, crane_id = self._get_state_for_heuristics()
             self.crane_in_decision = self.model.crane_in_decision.id
 
             if not mask.any():
@@ -101,7 +99,7 @@ class SteelStockYard:
         reward = self._calculate_reward()
         self.time = self.model.env.now
 
-        return next_state, reward, done, mask
+        return next_state, reward, done, mask, crane_id
 
     def reset(self):
         self.model = Management(self.df_storage, self.df_reshuffle, self.df_retrieval,
@@ -118,9 +116,9 @@ class SteelStockYard:
                     self.model.env.step()
 
             if self.rl:
-                initial_state, mask = self._get_state()
+                initial_state, mask, crane_id = self._get_state()
             else:
-                initial_state, mask = self._get_state_for_heuristics()
+                initial_state, mask, crane_id = self._get_state_for_heuristics()
             self.crane_in_decision = self.model.crane_in_decision.id
 
             if not mask.any():
@@ -129,7 +127,7 @@ class SteelStockYard:
             else:
                 break
 
-        return initial_state, mask
+        return initial_state, mask, crane_id
 
     def get_logs(self, path=None):
         log = self.model.monitor.get_logs(path)
@@ -144,17 +142,21 @@ class SteelStockYard:
             avoiding_time += self.model.reward_info[crane_name]["Avoiding Time"]
             waiting_time += self.model.reward_info[crane_name]["Waiting Time"]
 
-        if self.model.env.now != self.time:
-            if self.reward_sig == 0:
+            if crane_name == "Crane-1":
+                reward1 = (empty_travel_time + avoiding_time + waiting_time)
+            elif crane_name == "Crane-2":
+                reward2 = (empty_travel_time + avoiding_time + waiting_time)
+
+        if self.parameter_sharing:
+            if self.model.env.now != self.time:
                 reward = - (empty_travel_time + avoiding_time + waiting_time) / (2 * (self.model.env.now - self.time))
-            elif self.reward_sig == 1:
-                reward = - empty_travel_time / (2 * (self.model.env.now - self.time))
-            elif self.reward_sig == 2:
-                reward = - avoiding_time / (2 * (self.model.env.now - self.time))
             else:
-                reward = reward = - waiting_time / (2 * (self.model.env.now - self.time))
+                reward = 0.0
         else:
-            reward = 0
+            if self.model.env.now != self.time:
+                reward = [-reward1, -reward2, self.model.env.now - self.time]
+            else:
+                reward = [0.0, 0.0, 0.0]
 
         return reward
 
@@ -255,11 +257,11 @@ class SteelStockYard:
 
         mask = torch.tensor(mask, dtype=torch.bool).to(self.device)
 
-        return state, mask
+        return state, mask, self.model.crane_in_decision.id
 
     def _get_state_for_heuristics(self):
         state = {"action_mapping": self.action_mapping,
-                 "piles_all": [], "piles_sd": [], "piles_ma": [], "piles_mx": []}
+                 "piles_all": [], "piles_sd": [], "piles_ma": [], "piles_mx": [], "piles_srf": [], "piles_srt": []}
 
         mask = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
 
@@ -303,6 +305,15 @@ class SteelStockYard:
                         if expression1 or expression2:
                             mask[j, i] = 1
                             state["piles_all"].append((i, j))
+
+                            if (crane_name == "Crane-1" and from_pile_x <= 25) \
+                                or (crane_name == "Crane-2" and from_pile_x >= 23):
+                                state["piles_srf"].append((i, j))
+
+                            if (crane_name == "Crane-1" and to_pile_x <= 25) \
+                                    or (crane_name == "Crane-2" and to_pile_x >= 23):
+                                state["piles_srt"].append((i, j))
+
                             if moving_time_crane <= moving_time_min:
                                 if moving_time_crane < moving_time_min:
                                     state["piles_sd"] = []
@@ -343,4 +354,4 @@ class SteelStockYard:
 
         mask = torch.tensor(mask, dtype=torch.bool).to(self.device)
 
-        return state, mask
+        return state, mask, self.model.crane_in_decision.id

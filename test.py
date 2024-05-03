@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     test_paths = os.listdir(data_dir)
     index = ["P%d" % i for i in range(1, len(test_paths) + 1)] + ["avg"]
-    columns = ["RL", "SD", "MA", "MX", "RAND"] if algorithm == "ALL" else [algorithm]
+    columns = ["RL", "SD", "MA", "MX", "SRF", "SRT", "RAND"] if algorithm == "ALL" else [algorithm]
     df_makespan = pd.DataFrame(index=index, columns=columns)
     df_empty_travel_time = pd.DataFrame(index=index, columns=columns)
     df_avoiding_time = pd.DataFrame(index=index, columns=columns)
@@ -122,6 +122,10 @@ if __name__ == "__main__":
                     action = minimize_avoiding_time(state, mask)
                 elif name == "MX":
                     action = mixed_heruistic(state, mask)
+                elif name == "SRF":
+                    action = separate_regions_by_from_pile(state, mask)
+                elif name == "SRT":
+                    action = separate_regions_by_to_pile(state, mask)
                 else:
                     action = random_selection(state, mask)
                 next_state, reward, done, mask = env.step(action)
@@ -156,4 +160,4 @@ if __name__ == "__main__":
     df_empty_travel_time.to_excel(writer, sheet_name="empty_travel_time")
     df_avoiding_time.to_excel(writer, sheet_name="avoiding_time")
     df_computing_time.to_excel(writer, sheet_name="computing_time")
-    writer.save()
+    writer.close()

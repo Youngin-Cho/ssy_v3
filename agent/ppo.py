@@ -26,6 +26,7 @@ class Agent:
                  P_coeff,  # 정책 학습에 대한 가중치
                  V_coeff,  # 가치함수 학습에 대한 가중치
                  E_coeff,  # 엔트로피에 대한 가중치
+                 parameter_sharing=True,
                  device="cpu"):
 
         self.gamma = gamma
@@ -35,22 +36,42 @@ class Agent:
         self.P_coeff = P_coeff
         self.V_coeff = V_coeff
         self.E_coeff = E_coeff
+        self.parameter_sharing = parameter_sharing
         self.device = device
 
-        self.data = []
         self.network = Scheduler(meta_data, state_size, num_nodes, embed_dim, num_heads,
-                                 num_HGT_layers, num_actor_layers, num_critic_layers).to(device)
+                                 num_HGT_layers, num_actor_layers, num_critic_layers, parameter_sharing).to(device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
         self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
 
-    def put_data(self, transition):
-        self.data.append(transition)
+        if parameter_sharing:
+            self.data = []
+        else:
+            self.data1 = []
+            self.data2 = []
 
-    def make_batch(self):
+    def put_data(self, transition, crane_id):
+        if self.parameter_sharing:
+            self.data.append(transition)
+        else:
+            if crane_id == 0:
+                self.data1.append(transition)
+            else:
+                self.data2.append(transition)
+
+    def make_batch(self, crane_id):
         s_lst, a_lst, r_lst, s_prime_lst, a_logprob_lst, v_lst, mask_lst, done_lst \
             = [], [], [], [], [], [], [], []
 
-        for i, transition in enumerate(self.data):
+        if self.parameter_sharing:
+            data = self.data[:]
+        else:
+            if crane_id == 0:
+                data = self.data1[:]
+            else:
+                data = self.data2[:]
+
+        for i, transition in enumerate(data):
             s, a, r, s_prime, a_logprob, v, mask, done = transition
 
             s_lst.append(s)
@@ -68,7 +89,7 @@ class Agent:
             v_lst.append([0.0])
         else:
             with torch.no_grad():
-                _, _, v = self.network.act(s_prime_lst[-1], mask)
+                _, _, v = self.network.act(s_prime_lst[-1], mask, crane_id)
             v_lst.append([v])
 
         s, a, r, s_prime, a_logprob, v, mask, done \
@@ -85,15 +106,15 @@ class Agent:
 
         return s, a, r, s_prime, a_logprob, v, mask, done
 
-    def get_action(self, s, mask):
+    def get_action(self, s, mask, crane_id):
         self.network.eval()
         with torch.no_grad():
-            a = self.network.act(s, mask)
+            a = self.network.act(s, mask, crane_id)
         return a
 
-    def train(self):
+    def train(self, crane_id):
         self.network.train()
-        s, a, r, s_prime, a_logprob, v, mask, done = self.make_batch()
+        s, a, r, s_prime, a_logprob, v, mask, done = self.make_batch(crane_id)
         avg_loss = 0.0
 
         for i in range(self.K_epoch):
@@ -108,7 +129,7 @@ class Agent:
             advantage_lst.reverse()
             advantage = torch.concat(advantage_lst).unsqueeze(-1).to(self.device)
 
-            new_a_logprob, new_v, dist_entropy = self.network.evaluate(s, a, mask)
+            new_a_logprob, new_v, dist_entropy = self.network.evaluate(s, a, mask, crane_id)
             ratio = torch.exp(new_a_logprob - a_logprob)
 
             surr1 = ratio * advantage

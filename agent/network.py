@@ -14,7 +14,8 @@ class Scheduler(nn.Module):
                        num_heads,
                        num_HGT_layers,
                        num_actor_layers,
-                       num_critic_layers):
+                       num_critic_layers,
+                       parameter_sharing=True):
         super(Scheduler, self).__init__()
         self.meta_data = meta_data
         self.state_size = state_size
@@ -24,6 +25,7 @@ class Scheduler(nn.Module):
         self.num_HGT_layers = num_HGT_layers
         self.num_actor_layers = num_actor_layers
         self.num_critic_layers = num_critic_layers
+        self.parameter_sharing = parameter_sharing
 
         self.conv = nn.ModuleList()
         for i in range(self.num_HGT_layers):
@@ -32,25 +34,52 @@ class Scheduler(nn.Module):
             else:
                 self.conv.append(HGTConv(embed_dim, embed_dim, meta_data, heads=num_heads))
 
-        self.actor = nn.ModuleList()
-        for i in range(num_actor_layers):
-            if i == 0:
-                self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
-            elif 0 < i < num_actor_layers - 1:
-                self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
-            else:
-                self.actor.append(nn.Linear(embed_dim * 4, 1))
+        if parameter_sharing:
+            self.actor = nn.ModuleList()
+            for i in range(num_actor_layers):
+                if i == 0:
+                    self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                elif 0 < i < num_actor_layers - 1:
+                    self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                else:
+                    self.actor.append(nn.Linear(embed_dim * 4, 1))
 
-        self.critic = nn.ModuleList()
-        for i in range(num_critic_layers):
-            if i == 0:
-                self.critic.append(nn.Linear(embed_dim * 2, embed_dim * 2))
-            elif i < num_critic_layers - 1:
-                self.critic.append(nn.Linear(embed_dim * 2, embed_dim * 2))
-            else:
-                self.critic.append(nn.Linear(embed_dim * 2, 1))
+            self.critic = nn.ModuleList()
+            for i in range(num_critic_layers):
+                if i == 0:
+                    self.critic.append(nn.Linear(embed_dim * 2, embed_dim * 2))
+                elif i < num_critic_layers - 1:
+                    self.critic.append(nn.Linear(embed_dim * 2, embed_dim * 2))
+                else:
+                    self.critic.append(nn.Linear(embed_dim * 2, 1))
+        else:
+            self.actor1 = nn.ModuleList()
+            self.actor2 = nn.ModuleList()
+            for i in range(num_actor_layers):
+                if i == 0:
+                    self.actor1.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                    self.actor2.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                elif 0 < i < num_actor_layers - 1:
+                    self.actor1.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                    self.actor2.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                else:
+                    self.actor1.append(nn.Linear(embed_dim * 4, 1))
+                    self.actor2.append(nn.Linear(embed_dim * 4, 1))
 
-    def act(self, state, mask, greedy=False):
+            self.critic1 = nn.ModuleList()
+            self.critic2 = nn.ModuleList()
+            for i in range(num_critic_layers):
+                if i == 0:
+                    self.critic1.append(nn.Linear(embed_dim * 2, embed_dim * 2))
+                    self.critic2.append(nn.Linear(embed_dim * 2, embed_dim * 2))
+                elif i < num_critic_layers - 1:
+                    self.critic1.append(nn.Linear(embed_dim * 2, embed_dim * 2))
+                    self.critic2.append(nn.Linear(embed_dim * 2, embed_dim * 2))
+                else:
+                    self.critic1.append(nn.Linear(embed_dim * 2, 1))
+                    self.critic2.append(nn.Linear(embed_dim * 2, 1))
+
+    def act(self, state, mask, greedy=False, crane_id=0):
         x_dict, edge_index_dict = state.x_dict, state.edge_index_dict
 
         for i in range(self.num_HGT_layers):
@@ -73,12 +102,28 @@ class Scheduler(nn.Module):
                                h_cranes_pooled_padding, h_piles_pooled_padding), dim=-1)
         h_pooled = torch.cat((h_cranes_pooled, h_piles_pooled), dim=-1)
 
-        for i in range(self.num_actor_layers):
-            if i < len(self.actor) - 1:
-                h_actions = self.actor[i](h_actions)
-                h_actions = F.elu(h_actions)
+        if self.parameter_sharing:
+            for i in range(self.num_actor_layers):
+                if i < len(self.actor) - 1:
+                    h_actions = self.actor[i](h_actions)
+                    h_actions = F.elu(h_actions)
+                else:
+                    logits = self.actor[i](h_actions).flatten()
+        else:
+            if crane_id == 0:
+                for i in range(self.num_actor_layers):
+                    if i < len(self.actor1) - 1:
+                        h_actions = self.actor1[i](h_actions)
+                        h_actions = F.elu(h_actions)
+                    else:
+                        logits = self.actor1[i](h_actions).flatten()
             else:
-                logits = self.actor[i](h_actions).flatten()
+                for i in range(self.num_actor_layers):
+                    if i < len(self.actor2) - 1:
+                        h_actions = self.actor2[i](h_actions)
+                        h_actions = F.elu(h_actions)
+                    else:
+                        logits = self.actor2[i](h_actions).flatten()
 
         mask = mask.transpose(0, 1).flatten()
         logits[~mask] = float('-inf')
@@ -94,16 +139,32 @@ class Scheduler(nn.Module):
                 action = dist.sample()
                 action_logprob = dist.log_prob(action)
 
-        for i in range(self.num_critic_layers):
-            if i < len(self.critic) - 1:
-                h_pooled = self.critic[i](h_pooled)
-                h_pooled = F.elu(h_pooled)
+        if self.parameter_sharing:
+            for i in range(self.num_critic_layers):
+                if i < len(self.critic) - 1:
+                    h_pooled = self.critic[i](h_pooled)
+                    h_pooled = F.elu(h_pooled)
+                else:
+                    state_value = self.critic[i](h_pooled)
+        else:
+            if crane_id == 0:
+                for i in range(self.num_critic_layers):
+                    if i < len(self.critic1) - 1:
+                        h_pooled = self.critic1[i](h_pooled)
+                        h_pooled = F.elu(h_pooled)
+                    else:
+                        state_value = self.critic1[i](h_pooled)
             else:
-                state_value = self.critic[i](h_pooled)
+                for i in range(self.num_critic_layers):
+                    if i < len(self.critic2) - 1:
+                        h_pooled = self.critic2[i](h_pooled)
+                        h_pooled = F.elu(h_pooled)
+                    else:
+                        state_value = self.critic2[i](h_pooled)
 
         return action.item(), action_logprob.item(), state_value.squeeze().item()
 
-    def evaluate(self, batch_state, batch_action, batch_mask):
+    def evaluate(self, batch_state, batch_action, batch_mask, crane_id=0):
         batch_size = batch_state.num_graphs
         x_dict, edge_index_dict = batch_state.x_dict, batch_state.edge_index_dict
 
@@ -127,12 +188,28 @@ class Scheduler(nn.Module):
                                h_cranes_pooled_padding, h_piles_pooled_padding), dim=-1)
         h_pooled = torch.cat((h_cranes_pooled, h_piles_pooled), dim=-1)
 
-        for i in range(self.num_actor_layers):
-            if i < len(self.actor) - 1:
-                h_actions = self.actor[i](h_actions)
-                h_actions = F.elu(h_actions)
+        if self.parameter_sharing:
+            for i in range(self.num_actor_layers):
+                if i < len(self.actor) - 1:
+                    h_actions = self.actor[i](h_actions)
+                    h_actions = F.elu(h_actions)
+                else:
+                    batch_logits = self.actor[i](h_actions).flatten(1)
+        else:
+            if crane_id == 0:
+                for i in range(self.num_actor_layers):
+                    if i < len(self.actor1) - 1:
+                        h_actions = self.actor1[i](h_actions)
+                        h_actions = F.elu(h_actions)
+                    else:
+                        batch_logits = self.actor1[i](h_actions).flatten(1)
             else:
-                batch_logits = self.actor[i](h_actions).flatten(1)
+                for i in range(self.num_actor_layers):
+                    if i < len(self.actor2) - 1:
+                        h_actions = self.actor2[i](h_actions)
+                        h_actions = F.elu(h_actions)
+                    else:
+                        batch_logits = self.actor2[i](h_actions).flatten(1)
 
         batch_mask = batch_mask.transpose(1, 2).flatten(1)
         batch_logits[~batch_mask] = float('-inf')
@@ -140,12 +217,28 @@ class Scheduler(nn.Module):
         batch_dist = Categorical(batch_probs)
         batch_action_logprobs = batch_dist.log_prob(batch_action.squeeze()).unsqueeze(-1)
 
-        for i in range(self.num_critic_layers):
-            if i < len(self.critic) - 1:
-                h_pooled = self.critic[i](h_pooled)
-                h_pooled = F.elu(h_pooled)
+        if self.parameter_sharing:
+            for i in range(self.num_critic_layers):
+                if i < len(self.critic) - 1:
+                    h_pooled = self.critic[i](h_pooled)
+                    h_pooled = F.elu(h_pooled)
+                else:
+                    batch_state_values = self.critic[i](h_pooled)
+        else:
+            if crane_id == 0:
+                for i in range(self.num_critic_layers):
+                    if i < len(self.critic1) - 1:
+                        h_pooled = self.critic1[i](h_pooled)
+                        h_pooled = F.elu(h_pooled)
+                    else:
+                        batch_state_values = self.critic1[i](h_pooled)
             else:
-                batch_state_values = self.critic[i](h_pooled)
+                for i in range(self.num_critic_layers):
+                    if i < len(self.critic2) - 1:
+                        h_pooled = self.critic2[i](h_pooled)
+                        h_pooled = F.elu(h_pooled)
+                    else:
+                        batch_state_values = self.critic2[i](h_pooled)
 
         batch_dist_entropys = batch_dist.entropy().unsqueeze(-1)
 

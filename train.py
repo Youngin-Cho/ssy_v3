@@ -4,6 +4,7 @@ import string
 
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from collections import deque
 
 from cfg_train import get_cfg
 from agent.ppo import *
@@ -23,17 +24,18 @@ def evaluate(val_dir):
                                       input_points=input_points, output_points=output_points,
                                       working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                       multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                      reward_sig=reward_sig, rl=True, record_events=False, device=device)
+                                      parameter_sharing=parameter_sharing, rl=True, record_events=False, device=device)
 
-            state, mask = test_env.reset()
+            state, mask, crane_id = test_env.reset()
             done = False
 
             while not done:
-                action, _, _ = agent.get_action(state, mask)
-                next_state, reward, done, next_mask = test_env.step(action)
+                action, _, _ = agent.get_action(state, mask, crane_id)
+                next_state, reward, done, next_mask, next_crane_id = test_env.step(action)
 
                 state = next_state
                 mask = next_mask
+                crane_id = next_crane_id
 
                 if done:
                     # log = test_env.get_logs()
@@ -97,7 +99,8 @@ if __name__ == "__main__":
     multi_w = cfg.multi_w
     multi_dis = cfg.multi_dis
 
-    reward_sig = cfg.reward_sig
+    parameter_sharing = bool(cfg.parameter_sharing)
+    team_reward = bool(cfg.team_reward)
 
     n_episode = cfg.n_episode
     eval_every = cfg.eval_every
@@ -171,11 +174,11 @@ if __name__ == "__main__":
                          input_points=input_points, output_points=output_points,
                          working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                          multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                         reward_sig=reward_sig, rl=True, record_events=record_events, device=device)
+                         parameter_sharing=parameter_sharing, rl=True, record_events=record_events, device=device)
 
     agent = Agent(env.meta_data, env.state_size, env.num_nodes, embed_dim, num_heads,
                   num_HGT_layers, num_actor_layers, num_critic_layers, lr, lr_decay, lr_step,
-                  gamma, lmbda, eps_clip, K_epoch, P_coeff, V_coeff, E_coeff, device=device)
+                  gamma, lmbda, eps_clip, K_epoch, P_coeff, V_coeff, E_coeff, parameter_sharing, device=device)
     if cfg.vessl == 0:
         writer = SummaryWriter(log_dir)
 
@@ -187,10 +190,17 @@ if __name__ == "__main__":
     else:
         start_episode = 1
 
-    with open(log_dir + "train_log.csv", 'w') as f:
-        f.write('episode, reward, loss, lr\n')
+    if parameter_sharing:
+        with open(log_dir + "train_log.csv", 'w') as f:
+            f.write('episode, reward, loss, lr\n')
+    else:
+        with open(log_dir + "train_log_agent1.csv", 'w') as f:
+            f.write('episode, reward, loss, lr\n')
+        with open(log_dir + "train_log_agent2.csv", 'w') as f:
+            f.write('episode, reward, loss, lr\n')
+
     with open(log_dir + "validation_log.csv", 'w') as f:
-        f.write('episode, average_delay, move_ratio, priority_ratio\n')
+        f.write('episode, makespan\n')
 
     for e in range(start_episode, n_episode + 1):
         if cfg.vessl == 1:
@@ -198,40 +208,132 @@ if __name__ == "__main__":
         elif cfg.vessl == 0:
             writer.add_scalar("Training/Learning Rate", agent.scheduler.get_last_lr()[0], e)
 
-        n = 0
-        r_epi = 0.0
-        avg_loss = 0.0
         done = False
 
-        state, mask = env.reset()
+        if parameter_sharing:
+            r_epi = 0.0
+            n = 0
+            avg_loss = 0.0
+        else:
+            r_epi1 = 0.0
+            r_epi2 = 0.0
+            n1 = 0
+            n2 = 0
+            avg_loss1 = 0.0
+            avg_loss2 = 0.0
+            reward1 = []
+            reward2 = []
+            interval1 = []
+            interval2 = []
+            transition1 = []
+            transition2 = []
+
+        state, mask, crane_id = env.reset()
 
         while not done:
-            for t in range(T_horizon):
-                action, action_logprob, state_value = agent.get_action(state, mask)
-                next_state, reward, done, next_mask = env.step(action)
+            action, action_logprob, state_value = agent.get_action(state, mask, crane_id)
+            next_state, reward, done, next_mask, next_crane_id = env.step(action)
 
-                agent.put_data((state, action, reward, next_state, action_logprob, state_value, mask, done))
-                state = next_state
-                mask = next_mask
-
+            if parameter_sharing:
                 r_epi += reward
+                agent.put_data((state, action, reward, next_state, action_logprob, state_value, mask, done))
+            else:
+                if crane_id == 0:
+                    if team_reward:
+                        reward1.append(reward[0] + reward[1])
+                    else:
+                        reward1.append(reward[0])
+                    interval1.append(reward[2])
+                else:
+                    if team_reward:
+                        reward2.append(reward[0] + reward[1])
+                    else:
+                        reward2.append(reward[1])
+                    interval2.append(reward[2])
 
-                if done:
-                    break
+                if crane_id == 0:
+                    if len(transition1) == 0:
+                        transition1 = [state, action, action_logprob, state_value, mask, done]
+                    else:
+                        transition1.insert(2, sum(reward1) / sum(interval1))
+                        r_epi1 += sum(reward1) / sum(interval1)
+                        transition1.insert(3, next_state)
+                        agent.put_data(transition1, crane_id)
+                        transition1 = []
+                        reward1 = []
+                        interval1 = []
+                else:
+                    if len(transition2) == 0:
+                        transition2 = [state, action, action_logprob, state_value, mask, done]
+                    else:
+                        transition2.insert(2, sum(reward2) / sum(interval2))
+                        r_epi2 += sum(reward2) / sum(interval2)
+                        transition2.insert(3, next_state)
+                        agent.put_data(transition2, crane_id)
+                        transition2 = []
+                        reward2 = []
+                        interval2 = []
 
-            n += 1
-            avg_loss += agent.train()
+            state = next_state
+            mask = next_mask
+            crane_id = next_crane_id
+
+            if parameter_sharing:
+                if len(agent.data) == T_horizon:
+                    n += 1
+                    avg_loss += agent.train(None)
+            else:
+                if len(agent.data1) == T_horizon:
+                    n1 += 1
+                    avg_loss1 += agent.train(0)
+                if len(agent.data2) == T_horizon:
+                    n2 += 1
+                    avg_loss2 += agent.train(1)
+
+            if done:
+                break
+
+        if parameter_sharing:
+            if len(agent.data) > 0:
+                n += 1
+                avg_loss += agent.train(None)
+        else:
+            if len(agent.data1) > 0:
+                n1 += 1
+                avg_loss1 += agent.train(0)
+            if len(agent.data2) > 0:
+                n2 += 1
+                avg_loss2 += agent.train(1)
+
         agent.scheduler.step()
 
-        print("episode: %d | reward: %.4f | loss: %.4f" % (e, r_epi, avg_loss / n))
-        with open(log_dir + "train_log.csv", 'a') as f:
-            f.write('%d, %1.4f, %1.4f, %f\n' % (e, r_epi, avg_loss, agent.scheduler.get_last_lr()[0]))
+        if parameter_sharing:
+            print("episode: %d | reward: %.4f | loss: %.4f" % (e, r_epi, avg_loss / n))
+            with open(log_dir + "train_log.csv", 'a') as f:
+                f.write('%d, %1.4f, %1.4f, %f\n' % (e, r_epi, avg_loss, agent.scheduler.get_last_lr()[0]))
 
-        if cfg.vessl == 1:
-            vessl.log(payload={"Reward": r_epi, "Loss": avg_loss / n}, step=e)
-        elif cfg.vessl == 0:
-            writer.add_scalar("Training/Reward", r_epi, e)
-            writer.add_scalar("Training/Loss", avg_loss / n, e)
+            if cfg.vessl == 1:
+                vessl.log(payload={"Reward": r_epi, "Loss": avg_loss / n}, step=e)
+            elif cfg.vessl == 0:
+                writer.add_scalar("Training/Reward", r_epi, e)
+                writer.add_scalar("Training/Loss", avg_loss / n, e)
+        else:
+            print("Agent 1) episode: %d | reward: %.4f | loss: %.4f" % (e, r_epi1, avg_loss1 / n1))
+            print("Agent 2) episode: %d | reward: %.4f | loss: %.4f" % (e, r_epi2, avg_loss2 / n2))
+            with open(log_dir + "train_log_agent1.csv", 'a') as f:
+                f.write('%d, %1.4f, %1.4f, %f\n' % (e, r_epi1, avg_loss1 / n1, agent.scheduler.get_last_lr()[0]))
+            with open(log_dir + "train_log_agent2.csv", 'a') as f:
+                f.write('%d, %1.4f, %1.4f, %f\n' % (e, r_epi2, avg_loss2 / n2, agent.scheduler.get_last_lr()[0]))
+
+            if cfg.vessl == 1:
+                vessl.log(payload={"Reward1": r_epi1, "Loss1": avg_loss1 / n1}, step=e)
+                vessl.log(payload={"Reward2": r_epi2, "Loss2": avg_loss2 / n2}, step=e)
+            elif cfg.vessl == 0:
+                writer.add_scalar("Training/Reward1", r_epi1, e)
+                writer.add_scalar("Training/Reward2", r_epi2, e)
+                writer.add_scalar("Training/Loss1", avg_loss1 / n1, e)
+                writer.add_scalar("Training/Loss2", avg_loss2 / n2, e)
+
 
         if e == start_episode or e % eval_every == 0:
             makespan = evaluate(val_dir)
@@ -253,7 +355,7 @@ if __name__ == "__main__":
                                  input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                  multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                 reward_sig=reward_sig, rl=True, record_events=record_events, device=device)
+                                 parameter_sharing=parameter_sharing, rl=True, record_events=record_events, device=device)
 
     if cfg.vessl == 0:
         writer.close()
