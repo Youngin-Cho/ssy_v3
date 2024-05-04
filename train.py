@@ -238,18 +238,18 @@ if __name__ == "__main__":
                 r_epi += reward
                 agent.put_data((state, action, reward, next_state, action_logprob, state_value, mask, done))
             else:
+                interval1.append(reward[2])
+                interval2.append(reward[2])
                 if crane_id == 0:
                     if team_reward:
                         reward1.append(reward[0] + reward[1])
                     else:
                         reward1.append(reward[0])
-                    interval1.append(reward[2])
                 else:
                     if team_reward:
                         reward2.append(reward[0] + reward[1])
                     else:
                         reward2.append(reward[1])
-                    interval2.append(reward[2])
 
                 if crane_id == 0:
                     if len(transition1) == 0:
