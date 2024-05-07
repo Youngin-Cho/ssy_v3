@@ -109,7 +109,7 @@ class Agent:
     def get_action(self, s, mask, crane_id):
         self.network.eval()
         with torch.no_grad():
-            a = self.network.act(s, mask, crane_id)
+            a = self.network.act(s, mask, crane_id, greedy=False)
         return a
 
     def train(self, crane_id):

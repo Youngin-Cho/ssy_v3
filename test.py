@@ -110,12 +110,12 @@ if __name__ == "__main__":
                 agent.load_state_dict(checkpoint['model_state_dict'])
 
             start = time.time()
-            state, mask = env.reset()
+            state, mask, crane_id = env.reset()
             done = False
 
             while not done:
                 if name == "RL":
-                    action, _, _ = agent.act(state, mask, greedy=False)
+                    action, _, _ = agent.act(state, mask, crane_id, greedy=False)
                 elif name == "SD":
                     action = shortest_distance(state, mask)
                 elif name == "MA":
@@ -128,8 +128,10 @@ if __name__ == "__main__":
                     action = separate_regions_by_to_pile(state, mask)
                 else:
                     action = random_selection(state, mask)
-                next_state, reward, done, mask = env.step(action)
+
+                next_state, reward, done, mask, next_crane_id = env.step(action)
                 state = next_state
+                crane_id = next_crane_id
 
                 if done:
                     finish = time.time()
