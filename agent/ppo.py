@@ -136,9 +136,9 @@ class Agent:
             surr2 = torch.clamp(ratio, 1 - self.eps_clip, 1 + self.eps_clip) * advantage
             loss = - self.P_coeff * torch.min(surr1, surr2) + self.V_coeff * F.smooth_l1_loss(new_v, td_target) - self.E_coeff * dist_entropy
 
-            self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
+            self.optimizer.zero_grad()
 
             avg_loss += loss.mean().item()
 
