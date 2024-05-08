@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
             if parameter_sharing:
                 r_epi += reward
-                agent.put_data((state, action, reward, next_state, action_logprob, state_value, mask, done))
+                agent.put_data((state, action, reward, next_state, action_logprob, state_value, mask, done), None)
             else:
                 interval1.append(reward[2])
                 interval2.append(reward[2])
