@@ -265,7 +265,7 @@ if __name__ == '__main__':
     n_bays_in_area6 = 1
 
     n_from_piles_storage = 1
-    n_to_piles_storage = 7
+    n_to_piles_storage = 5
     n_from_piles_reshuffle = 10
     n_to_piles_reshuffle = 10
     n_from_piles_retrieval_cn1 = 5
@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/data/test_v2/case1/%d-%d-%d/" % (n_to_piles_storage, n_from_piles_reshuffle, n_to_piles_reshuffle)
+    file_dir = "../input/data/test_v2/case2/%d/" % n_plates_storage
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)

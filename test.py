@@ -63,6 +63,7 @@ if __name__ == "__main__":
     test_paths = os.listdir(data_dir)
     index = ["P%d" % i for i in range(1, len(test_paths) + 1)] + ["avg"]
     columns = ["RL", "SD", "MA", "MX", "SRF", "SRT", "RAND"] if algorithm == "ALL" else [algorithm]
+    # columns = ["SRT"] if algorithm == "ALL" else [algorithm]
     df_makespan = pd.DataFrame(index=index, columns=columns)
     df_empty_travel_time = pd.DataFrame(index=index, columns=columns)
     df_avoiding_time = pd.DataFrame(index=index, columns=columns)

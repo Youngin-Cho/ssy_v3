@@ -590,6 +590,10 @@ class Management:
 
                 cnt += 1
 
+            if self.location_mapping[crane.current_coord].name != location:
+                log = self.monitor.get_logs("./temp.csv")
+                print(0)
+
             assert self.location_mapping[crane.current_coord].name == location
             if crane.loading:
                 plate_name = crane.get_plate(self.location_mapping[crane.current_coord])
