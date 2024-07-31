@@ -63,17 +63,24 @@ if __name__ == "__main__":
     test_paths = os.listdir(data_dir)
     index = ["P%d" % i for i in range(1, len(test_paths) + 1)] + ["avg"]
     columns = ["RL", "SD", "MA", "MX", "SRF", "SRT", "RAND"] if algorithm == "ALL" else [algorithm]
-    # columns = ["SRT"] if algorithm == "ALL" else [algorithm]
     df_makespan = pd.DataFrame(index=index, columns=columns)
-    df_empty_travel_time = pd.DataFrame(index=index, columns=columns)
-    df_avoiding_time = pd.DataFrame(index=index, columns=columns)
+    df_empty_travel_time_1 = pd.DataFrame(index=index, columns=columns)
+    df_avoiding_time_1 = pd.DataFrame(index=index, columns=columns)
+    df_idle_time_1 = pd.DataFrame(index=index, columns=columns)
+    df_empty_travel_time_2 = pd.DataFrame(index=index, columns=columns)
+    df_avoiding_time_2 = pd.DataFrame(index=index, columns=columns)
+    df_idle_time_2 = pd.DataFrame(index=index, columns=columns)
     df_computing_time = pd.DataFrame(index=index, columns=columns)
 
     for name in columns:
         progress = 0
         list_makespan = []
-        list_empty_travel_time = []
-        list_avoiding_time = []
+        list_empty_travel_time_1 = []
+        list_avoiding_time_1 = []
+        list_idle_time_1 = []
+        list_empty_travel_time_2 = []
+        list_avoiding_time_2 = []
+        list_idle_time_2 = []
         list_computing_time = []
 
         for prob, path in zip(index, test_paths):
@@ -90,14 +97,14 @@ if __name__ == "__main__":
                                      input_points=input_points, output_points=output_points,
                                      working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                      multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                     rl=True, record_events=record_events)
+                                     algorithm="RL", record_events=record_events)
             else:
                 env = SteelStockYard(data_dir + path, look_ahead=parameters["look_ahead"],
                                      max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
                                      input_points=input_points, output_points=output_points,
                                      working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                      multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                     rl=False, record_events=record_events)
+                                     algorithm=name, record_events=record_events)
 
             if name == "RL":
                 device = torch.device("cpu")
@@ -138,29 +145,47 @@ if __name__ == "__main__":
                     finish = time.time()
                     makespan = env.model.env.now
                     for crane_name in env.model.reward_info.keys():
-                        empty_travel_time += env.model.reward_info[crane_name]["Empty Travel Time Cumulative"]
-                        avoiding_time += env.model.reward_info[crane_name]["Avoiding Time Cumulative"]
+                        if crane_name == "Crane-1":
+                            empty_travel_time_1 = env.model.reward_info[crane_name]["Empty Travel Time Cumulative"]
+                            avoiding_time_1 = env.model.reward_info[crane_name]["Avoiding Time Cumulative"]
+                            idle_time_1 = env.model.reward_info[crane_name]["Idle Time Cumulative"]
+                        elif crane_name == "Crane-2":
+                            empty_travel_time_2 = env.model.reward_info[crane_name]["Empty Travel Time Cumulative"]
+                            avoiding_time_2 = env.model.reward_info[crane_name]["Avoiding Time Cumulative"]
+                            idle_time_2 = env.model.reward_info[crane_name]["Idle Time Cumulative"]
                     computing_time = finish - start
+                    env.get_logs(log_dir + "sim_%s.csv" % name)
                     break
 
             list_makespan.append(makespan)
-            list_empty_travel_time.append(empty_travel_time)
-            list_avoiding_time.append(avoiding_time)
+            list_empty_travel_time_1.append(empty_travel_time_1)
+            list_avoiding_time_1.append(avoiding_time_1)
+            list_idle_time_1.append(idle_time_1)
+            list_empty_travel_time_2.append(empty_travel_time_2)
+            list_avoiding_time_2.append(avoiding_time_2)
+            list_idle_time_2.append(idle_time_2)
             list_computing_time.append(computing_time)
 
             progress += 1
             print("%d/%d test for %s done" % (progress, len(index) - 1, name))
 
         df_makespan[name] = list_makespan + [sum(list_makespan) / len(list_makespan)]
-        df_empty_travel_time[name] = list_empty_travel_time + [
-            sum(list_empty_travel_time) / len(list_empty_travel_time)]
-        df_avoiding_time[name] = list_avoiding_time + [sum(list_avoiding_time) / len(list_avoiding_time)]
+        df_empty_travel_time_1[name] = list_empty_travel_time_1 + [sum(list_empty_travel_time_1) / len(list_empty_travel_time_1)]
+        df_avoiding_time_1[name] = list_avoiding_time_1 + [sum(list_avoiding_time_1) / len(list_avoiding_time_1)]
+        df_idle_time_1[name] = list_idle_time_1 + [sum(list_idle_time_1) / len(list_idle_time_1)]
+        df_empty_travel_time_2[name] = list_empty_travel_time_2 + [sum(list_empty_travel_time_2) / len(list_empty_travel_time_2)]
+        df_avoiding_time_2[name] = list_avoiding_time_2 + [sum(list_avoiding_time_2) / len(list_avoiding_time_2)]
+        df_idle_time_2[name] = list_idle_time_2 + [sum(list_idle_time_2) / len(list_idle_time_2)]
         df_computing_time[name] = list_computing_time + [sum(list_computing_time) / len(list_computing_time)]
         print("==========test for %s finished==========" % name)
 
     writer = pd.ExcelWriter(log_dir + 'test_results.xlsx')
     df_makespan.to_excel(writer, sheet_name="makespan")
-    df_empty_travel_time.to_excel(writer, sheet_name="empty_travel_time")
-    df_avoiding_time.to_excel(writer, sheet_name="avoiding_time")
+    df_empty_travel_time_1.to_excel(writer, sheet_name="empty_travel_time_1")
+    df_avoiding_time_1.to_excel(writer, sheet_name="avoiding_time_1")
+    df_idle_time_1.to_excel(writer, sheet_name="idle_time_1")
+    df_empty_travel_time_2.to_excel(writer, sheet_name="empty_travel_time_2")
+    df_avoiding_time_2.to_excel(writer, sheet_name="avoiding_time_2")
+    df_idle_time_2.to_excel(writer, sheet_name="idle_time_2")
     df_computing_time.to_excel(writer, sheet_name="computing_time")
     writer.close()

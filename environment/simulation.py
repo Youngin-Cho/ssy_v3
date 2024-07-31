@@ -82,7 +82,7 @@ class Crane:
         self.x_velocity = 0.5
         self.y_velocity = 1.0
         self.update_time = 0.0
-        self.waiting_time = 0.0
+        self.idle_time = 0.0
         self.empty_travel_time = 0.0
         self.avoiding_time = 0.0
 
@@ -213,7 +213,7 @@ class Monitor:
 class Management:
     def __init__(self, df_storage, df_reshuffle, df_retrieval,
                  max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
-                 input_points=(1,), output_points=(23, 27, 44),
+                 input_points=(1,), output_points=(22, 26, 44),
                  working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5,
                  multi_num=3, multi_w=20.0, multi_dis=2, record_events=False):
         self.df_storage = df_storage
@@ -246,10 +246,10 @@ class Management:
                                         "Locations": []} for crane_name in ["Crane-1", "Crane-2"]}
         self.reward_info = {crane_name: {"Empty Travel Time": 0.0,
                                          "Avoiding Time": 0.0,
-                                         "Waiting Time": 0.0,
+                                         "Idle Time": 0.0,
                                          "Empty Travel Time Cumulative": 0.0,
                                          "Avoiding Time Cumulative": 0.0,
-                                         "Waiting Time Cumulative": 0.0} for crane_name in ["Crane-1", "Crane-2"]}
+                                         "Idle Time Cumulative": 0.0} for crane_name in ["Crane-1", "Crane-2"]}
 
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()}  # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
@@ -358,9 +358,9 @@ class Management:
                     self.state_info[crane.opposite.name]["Locations"] = []
 
             # 크레인 대기 시간 기록
-            self.reward_info[crane.name]["Waiting Time"] \
-                = crane.waiting_time - self.reward_info[crane.name]["Waiting Time Cumulative"]
-            self.reward_info[crane.name]["Waiting Time Cumulative"] = crane.waiting_time
+            self.reward_info[crane.name]["Idle Time"] \
+                = crane.idle_time - self.reward_info[crane.name]["Idle Time Cumulative"]
+            self.reward_info[crane.name]["Idle Time Cumulative"] = crane.idle_time
             # 크레인의 empty travel time 기록
             self.reward_info[crane.name]["Empty Travel Time"] \
                 = crane.empty_travel_time - self.reward_info[crane.name]["Empty Travel Time Cumulative"]
@@ -371,9 +371,9 @@ class Management:
             self.reward_info[crane.name]["Avoiding Time Cumulative"] = crane.avoiding_time
 
             if crane.opposite.name in self.working_crane_ids:
-                self.reward_info[crane.opposite.name]["Waiting Time"] \
-                    = crane.opposite.waiting_time - self.reward_info[crane.opposite.name]["Waiting Time Cumulative"]
-                self.reward_info[crane.opposite.name]["Waiting Time Cumulative"] = crane.opposite.waiting_time
+                self.reward_info[crane.opposite.name]["Idle Time"] \
+                    = crane.opposite.idle_time - self.reward_info[crane.opposite.name]["Idle Time Cumulative"]
+                self.reward_info[crane.opposite.name]["Idle Time Cumulative"] = crane.opposite.idle_time
                 self.reward_info[crane.opposite.name]["Empty Travel Time"] \
                     = crane.opposite.empty_travel_time - self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"]
                 self.reward_info[crane.opposite.name]["Empty Travel Time Cumulative"] = crane.opposite.empty_travel_time
@@ -473,7 +473,7 @@ class Management:
             if self.record_events:
                 self.monitor.record(self.env.now, "Waiting Finish", crane=crane.name,
                                     location=self.location_mapping[crane.current_coord].name)
-            crane.waiting_time += waiting_finish - waiting_start
+            crane.idle_time += waiting_finish - waiting_start
         else:
             crane.idle = False
 

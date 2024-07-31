@@ -9,9 +9,9 @@ from environment.simulation import Management
 
 class SteelStockYard:
     def __init__(self, data_src, look_ahead=2, max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
-                 input_points=(1,), output_points=(23, 27, 44), working_crane_ids=("Crane-1", "Crane-2"),
+                 input_points=(1,), output_points=(22, 26, 44), working_crane_ids=("Crane-1", "Crane-2"),
                  safety_margin=5, multi_num=3, multi_w=20.0, multi_dis=2,
-                 parameter_sharing=True, team_reward=True, rl=True, record_events=False, device=None):
+                 parameter_sharing=True, team_reward=True, algorithm="RL", record_events=False, device=None):
 
         self.data_src = data_src
         self.look_ahead = look_ahead
@@ -28,7 +28,7 @@ class SteelStockYard:
         self.multi_dis = multi_dis
         self.parameter_sharing = parameter_sharing
         self.team_reward = team_reward
-        self.rl = rl
+        self.algorithm = algorithm
         self.record_events = record_events
         self.device = device
 
@@ -84,7 +84,7 @@ class SteelStockYard:
                     else:
                         self.model.env.step()
 
-            if self.rl:
+            if self.algorithm == "RL":
                 next_state, mask, crane_id = self._get_state()
             else:
                 next_state, mask, crane_id = self._get_state_for_heuristics()
@@ -115,7 +115,7 @@ class SteelStockYard:
                 else:
                     self.model.env.step()
 
-            if self.rl:
+            if self.algorithm == "RL":
                 initial_state, mask, crane_id = self._get_state()
             else:
                 initial_state, mask, crane_id = self._get_state_for_heuristics()
@@ -136,20 +136,20 @@ class SteelStockYard:
     def _calculate_reward(self):
         empty_travel_time = 0.0
         avoiding_time = 0.0
-        waiting_time = 0.0
+        idle_time = 0.0
         for crane_name in self.model.reward_info.keys():
             empty_travel_time += self.model.reward_info[crane_name]["Empty Travel Time"]
             avoiding_time += self.model.reward_info[crane_name]["Avoiding Time"]
-            waiting_time += self.model.reward_info[crane_name]["Waiting Time"]
+            idle_time += self.model.reward_info[crane_name]["Idle Time"]
 
             if crane_name == "Crane-1":
-                reward1 = (empty_travel_time + avoiding_time + waiting_time)
+                reward1 = (empty_travel_time + avoiding_time + idle_time)
             elif crane_name == "Crane-2":
-                reward2 = (empty_travel_time + avoiding_time + waiting_time)
+                reward2 = (empty_travel_time + avoiding_time + idle_time)
 
         if self.parameter_sharing:
             if self.model.env.now != self.time:
-                reward = - (empty_travel_time + avoiding_time + waiting_time) / (2 * (self.model.env.now - self.time))
+                reward = - (empty_travel_time + avoiding_time + idle_time) / (2 * (self.model.env.now - self.time))
             else:
                 reward = 0.0
         else:
