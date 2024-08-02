@@ -24,7 +24,7 @@ def evaluate(val_dir):
                                       input_points=input_points, output_points=output_points,
                                       working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                       multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                      parameter_sharing=parameter_sharing, rl=True, record_events=False, device=device)
+                                      parameter_sharing=parameter_sharing, algorithm="RL", record_events=False, device=device)
 
             state, mask, crane_id = test_env.reset()
             done = False
@@ -174,7 +174,7 @@ if __name__ == "__main__":
                          input_points=input_points, output_points=output_points,
                          working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                          multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                         parameter_sharing=parameter_sharing, rl=True, record_events=record_events, device=device)
+                         parameter_sharing=parameter_sharing, algorithm="RL", record_events=record_events, device=device)
 
     agent = Agent(env.meta_data, env.state_size, env.num_nodes, embed_dim, num_heads,
                   num_HGT_layers, num_actor_layers, num_critic_layers, lr, lr_decay, lr_step,
@@ -355,7 +355,7 @@ if __name__ == "__main__":
                                  input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                  multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                 parameter_sharing=parameter_sharing, rl=True, record_events=record_events, device=device)
+                                 parameter_sharing=parameter_sharing, algorithm="RL", record_events=record_events, device=device)
 
     if cfg.vessl == 0:
         writer.close()
