@@ -38,11 +38,11 @@ class Scheduler(nn.Module):
             self.actor = nn.ModuleList()
             for i in range(num_actor_layers):
                 if i == 0:
-                    self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                    self.actor.append(nn.Linear(embed_dim * 2, embed_dim * 2))
                 elif 0 < i < num_actor_layers - 1:
-                    self.actor.append(nn.Linear(embed_dim * 4, embed_dim * 4))
+                    self.actor.append(nn.Linear(embed_dim * 2, embed_dim * 2))
                 else:
-                    self.actor.append(nn.Linear(embed_dim * 4, 1))
+                    self.actor.append(nn.Linear(embed_dim * 2, 1))
 
             self.critic = nn.ModuleList()
             for i in range(num_critic_layers):
@@ -95,11 +95,12 @@ class Scheduler(nn.Module):
         h_piles_padding = h_piles.unsqueeze(-2).expand(-1, self.num_nodes["crane"], -1)
         h_cranes_padding = h_cranes.unsqueeze(-3).expand_as(h_piles_padding)
 
-        h_cranes_pooled_padding = h_cranes_pooled[None, None, :].expand_as(h_cranes_padding)
-        h_piles_pooled_padding = h_piles_pooled[None, None, :].expand_as(h_piles_padding)
+        # h_cranes_pooled_padding = h_cranes_pooled[None, None, :].expand_as(h_cranes_padding)
+        # h_piles_pooled_padding = h_piles_pooled[None, None, :].expand_as(h_piles_padding)
 
-        h_actions = torch.cat((h_cranes_padding, h_piles_padding,
-                               h_cranes_pooled_padding, h_piles_pooled_padding), dim=-1)
+        # h_actions = torch.cat((h_cranes_padding, h_piles_padding,
+        #                        h_cranes_pooled_padding, h_piles_pooled_padding), dim=-1)
+        h_actions = torch.cat((h_cranes_padding, h_piles_padding), dim=-1)
         h_pooled = torch.cat((h_cranes_pooled, h_piles_pooled), dim=-1)
 
         if self.parameter_sharing:
@@ -181,11 +182,12 @@ class Scheduler(nn.Module):
         h_piles_padding = h_piles.unsqueeze(-2).expand(-1, -1, self.num_nodes["crane"], -1)
         h_cranes_padding = h_cranes.unsqueeze(-3).expand_as(h_piles_padding)
 
-        h_cranes_pooled_padding = h_cranes_pooled[:, None, None, :].expand_as(h_cranes_padding)
-        h_piles_pooled_padding = h_piles_pooled[:, None, None, :].expand_as(h_piles_padding)
+        # h_cranes_pooled_padding = h_cranes_pooled[:, None, None, :].expand_as(h_cranes_padding)
+        # h_piles_pooled_padding = h_piles_pooled[:, None, None, :].expand_as(h_piles_padding)
 
-        h_actions = torch.cat((h_cranes_padding, h_piles_padding,
-                               h_cranes_pooled_padding, h_piles_pooled_padding), dim=-1)
+        # h_actions = torch.cat((h_cranes_padding, h_piles_padding,
+        #                        h_cranes_pooled_padding, h_piles_pooled_padding), dim=-1)
+        h_actions = torch.cat((h_cranes_padding, h_piles_padding), dim=-1)
         h_pooled = torch.cat((h_cranes_pooled, h_piles_pooled), dim=-1)
 
         if self.parameter_sharing:
