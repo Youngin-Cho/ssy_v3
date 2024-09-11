@@ -213,7 +213,7 @@ class Monitor:
 class Management:
     def __init__(self, df_storage, df_reshuffle, df_retrieval,
                  max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
-                 input_points=(1,), output_points=(22, 26, 44),
+                 input_points=(1,), output_points=(23, 27, 44),
                  working_crane_ids=("Crane-1", "Crane-2"), safety_margin=5,
                  multi_num=3, multi_w=20.0, multi_dis=2, record_events=False):
         self.df_storage = df_storage
@@ -288,6 +288,8 @@ class Management:
         conveyors = OrderedDict()
         conveyors['cn1'] = Conveyor('cn1', self.output_points[0], 0.01)
         conveyors['cn2'] = Conveyor('cn2', self.output_points[1], 0.01)
+        # conveyors['cn1'] = Conveyor('cn1', self.output_points[0], 0.011)
+        # conveyors['cn2'] = Conveyor('cn2', self.output_points[1], 0.011)
         conveyors['cn3'] = Conveyor('cn3', self.output_points[2], 0.0005)
 
         # 적치 작업 대상 강재 데이터

@@ -26,7 +26,7 @@ class Agent:
                  P_coeff,  # 정책 학습에 대한 가중치
                  V_coeff,  # 가치함수 학습에 대한 가중치
                  E_coeff,  # 엔트로피에 대한 가중치
-                 parameter_sharing=True,
+                 use_gnn=True,
                  device="cpu"):
 
         self.gamma = gamma
@@ -36,40 +36,23 @@ class Agent:
         self.P_coeff = P_coeff
         self.V_coeff = V_coeff
         self.E_coeff = E_coeff
-        self.parameter_sharing = parameter_sharing
         self.device = device
 
         self.network = Scheduler(meta_data, state_size, num_nodes, embed_dim, num_heads,
-                                 num_HGT_layers, num_actor_layers, num_critic_layers, parameter_sharing).to(device)
+                                 num_HGT_layers, num_actor_layers, num_critic_layers, use_gnn=use_gnn).to(device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
         self.scheduler = StepLR(optimizer=self.optimizer, step_size=lr_step, gamma=lr_decay)
 
-        if parameter_sharing:
-            self.data = []
-        else:
-            self.data1 = []
-            self.data2 = []
+        self.data = []
 
     def put_data(self, transition, crane_id):
-        if self.parameter_sharing:
-            self.data.append(transition)
-        else:
-            if crane_id == 0:
-                self.data1.append(transition)
-            else:
-                self.data2.append(transition)
+        self.data.append(transition)
 
     def make_batch(self, crane_id):
         s_lst, a_lst, r_lst, s_prime_lst, a_logprob_lst, v_lst, mask_lst, done_lst \
             = [], [], [], [], [], [], [], []
 
-        if self.parameter_sharing:
-            data = self.data[:]
-        else:
-            if crane_id == 0:
-                data = self.data1[:]
-            else:
-                data = self.data2[:]
+        data = self.data[:]
 
         for i, transition in enumerate(data):
             s, a, r, s_prime, a_logprob, v, mask, done = transition

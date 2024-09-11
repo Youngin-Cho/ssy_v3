@@ -9,9 +9,9 @@ from environment.simulation import Management
 
 class SteelStockYard:
     def __init__(self, data_src, look_ahead=2, max_x=44, max_y=2, row_range=("A", "B"), bay_range=(1, 40),
-                 input_points=(1,), output_points=(22, 26, 44), working_crane_ids=("Crane-1", "Crane-2"),
+                 input_points=(1,), output_points=(23, 27, 44), working_crane_ids=("Crane-1", "Crane-2"),
                  safety_margin=5, multi_num=3, multi_w=20.0, multi_dis=2,
-                 parameter_sharing=True, team_reward=True, algorithm="RL", record_events=False, device=None):
+                 algorithm="RL", record_events=False, device=None):
 
         self.data_src = data_src
         self.look_ahead = look_ahead
@@ -26,8 +26,6 @@ class SteelStockYard:
         self.multi_num = multi_num
         self.multi_w = multi_w
         self.multi_dis = multi_dis
-        self.parameter_sharing = parameter_sharing
-        self.team_reward = team_reward
         self.algorithm = algorithm
         self.record_events = record_events
         self.device = device
@@ -142,21 +140,10 @@ class SteelStockYard:
             avoiding_time += self.model.reward_info[crane_name]["Avoiding Time"]
             idle_time += self.model.reward_info[crane_name]["Idle Time"]
 
-            if crane_name == "Crane-1":
-                reward1 = (empty_travel_time + avoiding_time + idle_time)
-            elif crane_name == "Crane-2":
-                reward2 = (empty_travel_time + avoiding_time + idle_time)
-
-        if self.parameter_sharing:
-            if self.model.env.now != self.time:
-                reward = - (empty_travel_time + avoiding_time + idle_time) / (2 * (self.model.env.now - self.time))
-            else:
-                reward = 0.0
+        if self.model.env.now != self.time:
+            reward = - (empty_travel_time + avoiding_time + idle_time) / (2 * (self.model.env.now - self.time))
         else:
-            if self.model.env.now != self.time:
-                reward = [-reward1, -reward2, self.model.env.now - self.time]
-            else:
-                reward = [0.0, 0.0, 0.0]
+            reward = 0.0
 
         return reward
 
@@ -261,7 +248,7 @@ class SteelStockYard:
 
     def _get_state_for_heuristics(self):
         state = {"action_mapping": self.action_mapping,
-                 "piles_all": [], "piles_sd": [], "piles_ma": [], "piles_mx": [], "piles_srf": [], "piles_srt": []}
+                 "piles_all": [], "piles_SETT": [], "piles_NCR": [], "piles_TDD": [], "piles_TDT": []}
 
         mask = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
 
@@ -308,25 +295,25 @@ class SteelStockYard:
 
                             if (crane_name == "Crane-1" and from_pile_x <= 25) \
                                 or (crane_name == "Crane-2" and from_pile_x >= 23):
-                                state["piles_srf"].append((i, j))
+                                state["piles_TDD"].append((i, j))
 
                             if (crane_name == "Crane-1" and to_pile_x <= 25) \
                                     or (crane_name == "Crane-2" and to_pile_x >= 23):
-                                state["piles_srt"].append((i, j))
+                                state["piles_TDT"].append((i, j))
 
                             if moving_time_crane <= moving_time_min:
                                 if moving_time_crane < moving_time_min:
-                                    state["piles_sd"] = []
+                                    state["piles_SETT"] = []
                                     moving_time_min = moving_time_crane
-                                state["piles_sd"].append((i, j))
+                                state["piles_SETT"].append((i, j))
 
                             if opposite_info["Idle"]:
-                                state["piles_ma"].append((i, j))
-                                if moving_time_crane <= moving_time_min_wo_interference:
-                                    if moving_time_crane < moving_time_min_wo_interference:
-                                        state["piles_mx"] = []
-                                        moving_time_min_wo_interference = moving_time_crane
-                                    state["piles_mx"].append((i, j))
+                                state["piles_NCR"].append((i, j))
+                                # if moving_time_crane <= moving_time_min_wo_interference:
+                                #     if moving_time_crane < moving_time_min_wo_interference:
+                                #         state["piles_mx"] = []
+                                #         moving_time_min_wo_interference = moving_time_crane
+                                #     state["piles_mx"].append((i, j))
                             else:
                                 opposite_crane_current_x = opposite_info["Current Coord"][0]
                                 opposite_crane_current_y = opposite_info["Current Coord"][1]
@@ -345,12 +332,12 @@ class SteelStockYard:
                                         or (crane_name == "Crane-2" and xcoord_crane < xcoord_opposite_crane + self.safety_margin)):
                                     pass
                                 else:
-                                    state["piles_ma"].append((i, j))
-                                    if moving_time_crane <= moving_time_min_wo_interference:
-                                        if moving_time_crane < moving_time_min_wo_interference:
-                                            state["piles_mx"] = []
-                                            moving_time_min_wo_interference = moving_time_crane
-                                        state["piles_mx"].append((i, j))
+                                    state["piles_NCR"].append((i, j))
+                                    # if moving_time_crane <= moving_time_min_wo_interference:
+                                    #     if moving_time_crane < moving_time_min_wo_interference:
+                                    #         state["piles_mx"] = []
+                                    #         moving_time_min_wo_interference = moving_time_crane
+                                    #     state["piles_mx"].append((i, j))
 
         mask = torch.tensor(mask, dtype=torch.bool).to(self.device)
 

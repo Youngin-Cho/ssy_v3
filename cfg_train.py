@@ -11,7 +11,7 @@ def get_cfg():
     parser.add_argument("--load_model", type=bool, default=False, help="load the trained model")
     parser.add_argument("--model_path", type=str, default=None, help="model file path")
 
-    parser.add_argument("--look_ahead", type=int, default=2, help="number of steel plates included in states")
+    parser.add_argument("--look_ahead", type=int, default=3, help="number of steel plates included in states")
     parser.add_argument("--record_events", type=int, default=0, help="Whether to record events")
 
     # 데이터 생성 관련 파라미터
@@ -48,10 +48,7 @@ def get_cfg():
     parser.add_argument("--multi_w", type=float, default=20.0, help="Total weight of plates allowed for multi-loading")
     parser.add_argument("--multi_dis", type=int, default=2, help="Distance allowed for multi-loading")
 
-    parser.add_argument("--reward_sig", type=int, default=0, help="Reward function")
-    parser.add_argument("--parameter_sharing", type=int, default=1, help="Use parameter sharing")
-    parser.add_argument("--team_reward", type=int, default=1, help="Use team reward")
-
+    parser.add_argument("--use_gnn", type=int, default=1, help="whether to use gnn")
     parser.add_argument("--embed_dim", type=int, default=128, help="node embedding dimension")
     parser.add_argument("--num_heads", type=int, default=4, help="multi-head attention in HGT layers")
     parser.add_argument("--num_HGT_layers", type=int, default=2, help="number of HGT layers")

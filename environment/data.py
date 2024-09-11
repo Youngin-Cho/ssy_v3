@@ -151,6 +151,7 @@ class DataGenerator:
         # 출고 계획 생성
         if self.retrieval:
             candidates = piles_in_area2 + piles_in_area3 + piles_in_area4
+            # candidates = piles_in_area3 + piles_in_area4 + piles_in_area5
             # candidates = [i for i in candidates if not i in ["A22", "A23", "A24", "B22", "B23", "B24"]]
             from_piles_retrieval_cn1 = random.sample(candidates, self.n_from_piles_retrieval_cn1)
             candidates = [i for i in candidates if not i in from_piles_retrieval_cn1]
@@ -182,12 +183,15 @@ class DataGenerator:
         # 선별 계획 생성
         if self.reshuffle:
             candidates = piles_in_area1 + piles_in_area5
+            # candidates = piles_in_area1 + piles_in_area2
             if not "Crane-1" in self.working_crane_ids:
                 candidates = [i for i in candidates if mapping_from_pile_to_x[i] >= 1 + self.safety_margin]
             if not "Crane-2" in self.working_crane_ids:
                 candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max - self.safety_margin]
             from_piles_reshuffle = random.sample(candidates, self.n_from_piles_reshuffle)
-            candidates = [i for i in piles_all if (i not in from_piles_retrieval) and (i not in piles_in_area0)]
+            # candidates = [i for i in piles_all if (i not in from_piles_retrieval) and (i not in piles_in_area0)]
+            piles_all_temp = piles_in_area2 + piles_in_area3 + piles_in_area4
+            candidates = [i for i in piles_all_temp if (i not in from_piles_retrieval) and (i not in piles_in_area0)]
             candidates = [i for i in candidates if i not in from_piles_reshuffle]
             if not "Crane-1" in self.working_crane_ids:
                 candidates = [i for i in candidates if mapping_from_pile_to_x[i] >= 1 + self.safety_margin]
@@ -225,6 +229,7 @@ class DataGenerator:
             else:
                 from_piles_storage = []
             candidates = piles_in_area1 + piles_in_area5
+            # candidates = piles_in_area1 + piles_in_area2
             candidates = [i for i in candidates if i not in from_piles_reshuffle]
             candidates = [i for i in candidates if mapping_from_pile_to_x[i] <= x_max - self.safety_margin]
             to_piles_storage = random.sample(candidates, self.n_to_piles_storage)
@@ -251,7 +256,7 @@ class DataGenerator:
 
 
 if __name__ == '__main__':
-    rows = ("A", "B")
+    rows = ("A", "B", "C", "D", "E", "F")
 
     storage = True
     reshuffle = True
@@ -278,7 +283,7 @@ if __name__ == '__main__':
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/data/test_v2/case2/%d/" % n_plates_storage
+    file_dir = "../input/data/test/case_study/row/6/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
