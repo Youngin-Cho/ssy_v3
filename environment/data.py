@@ -256,7 +256,7 @@ class DataGenerator:
 
 
 if __name__ == '__main__':
-    rows = ("A", "B", "C", "D", "E", "F")
+    rows = ("A", "B")
 
     storage = True
     reshuffle = True
@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/data/test/case_study/row/6/"
+    file_dir = "../input/test/scalability_test/5-20-20/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
