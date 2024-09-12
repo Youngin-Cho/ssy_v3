@@ -24,27 +24,27 @@ if __name__ == "__main__":
     # data_dir = cfg.data_dir
     # log_dir = cfg.log_dir
 
-    # data_dir = ["./input/data/test/scalability_test/storage_plan/10-10-10/",
-    #             "./input/data/test/scalability_test/storage_plan/15-10-10/",
-    #             "./input/data/test/scalability_test/storage_plan/20-10-10/",
-    #             "./input/data/test/scalability_test/reshuffling_plan/5-15-10/",
-    #             "./input/data/test/scalability_test/reshuffling_plan/5-20-10/",
-    #             "./input/data/test/scalability_test/reshuffling_plan/5-25-10/",
-    #             "./input/data/test/scalability_test/reshuffling_plan/5-10-15/",
-    #             "./input/data/test/scalability_test/reshuffling_plan/5-10-20/",
-    #             "./input/data/test/scalability_test/reshuffling_plan/5-10-25/"]
-    # log_dir = ["./output/test/scalability_test/storage_plan/10-10-10/",
-    #             "./output/test/scalability_test/storage_plan/15-10-10/",
-    #             "./output/test/scalability_test/storage_plan/20-10-10/",
-    #             "./output/test/scalability_test/reshuffling_plan/5-15-10/",
-    #             "./output/test/scalability_test/reshuffling_plan/5-20-10/",
-    #             "./output/test/scalability_test/reshuffling_plan/5-25-10/",
-    #             "./output/test/scalability_test/reshuffling_plan/5-10-15/",
-    #             "./output/test/scalability_test/reshuffling_plan/5-10-20/",
-    #             "./output/test/scalability_test/reshuffling_plan/5-10-25/"]
+    data_dir = ["./input/test/basic_test/5-10-10/",
+                "./input/test/scalability_test/5-10-15/",
+                "./input/test/scalability_test/5-10-20/",
+                "./input/test/scalability_test/5-15-10/",
+                "./input/test/scalability_test/5-15-15/",
+                "./input/test/scalability_test/5-15-20/",
+                "./input/test/scalability_test/5-20-10/",
+                "./input/test/scalability_test/5-20-15/",
+                "./input/test/scalability_test/5-20-20/"]
+    log_dir = ["./output/test/basic_test/5-10-10/",
+                "./output/test/scalability_test/5-10-15/",
+                "./output/test/scalability_test/5-10-20/",
+                "./output/test/scalability_test/5-15-10/",
+                "./output/test/scalability_test/5-15-15/",
+                "./output/test/scalability_test/5-15-20/",
+                "./output/test/scalability_test/5-20-10/",
+                "./output/test/scalability_test/5-20-15/",
+                "./output/test/scalability_test/5-20-20/"]
 
-    data_dir = ["./input/data/test/basic_test/5-10-10/",]
-    log_dir = ["./output/test/basic_test/iat/5-10-10/up10/"]
+    # data_dir = ["./input/data/test/basic_test/5-10-10/",]
+    # log_dir = ["./output/test/basic_test/iat/5-10-10/up10/"]
 
     with open(param_path, 'r') as f:
         parameters = json.load(f)
@@ -89,8 +89,8 @@ if __name__ == "__main__":
 
         index = ["P%d" % i for i in range(1, len(test_paths) + 1)] + ["avg"]
         # columns = ["RL", "SETT", "NCR", "TDD", "TDT", "RAND"] if algorithm == "ALL" else [algorithm]
-        # columns = ["RL"]
-        columns = ["SETT", "NCR", "TDD", "TDT", "RAND"]
+        columns = ["RL"]
+        # columns = ["SETT", "NCR", "TDD", "TDT", "RAND"]
         df_makespan = pd.DataFrame(index=index, columns=columns)
         df_empty_travel_time_1 = pd.DataFrame(index=index, columns=columns)
         df_avoiding_time_1 = pd.DataFrame(index=index, columns=columns)
@@ -206,7 +206,7 @@ if __name__ == "__main__":
             df_computing_time[name] = list_computing_time + [sum(list_computing_time) / len(list_computing_time)]
             print("==========test for %s finished==========" % name)
 
-        writer = pd.ExcelWriter(log_dir_temp + '(Heuristics) test_results.xlsx')
+        writer = pd.ExcelWriter(log_dir_temp + '(RL-GNN) test_results.xlsx')
         df_makespan.to_excel(writer, sheet_name="makespan")
         df_empty_travel_time_1.to_excel(writer, sheet_name="empty_travel_time_1")
         df_avoiding_time_1.to_excel(writer, sheet_name="avoiding_time_1")

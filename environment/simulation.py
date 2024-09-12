@@ -142,10 +142,10 @@ class Crane:
                 target_xcoord_opposite_crane = self.opposite.target_coord[0]
 
                 if self.name == 'Crane-1':
-                    if current_xcoord_crane >= target_xcoord_opposite_crane:
+                    if current_xcoord_crane > target_xcoord_opposite_crane - self.safety_margin:
                         x_coord = target_xcoord_opposite_crane - self.safety_margin
                 else:
-                    if current_xcoord_crane <= target_xcoord_opposite_crane:
+                    if current_xcoord_crane < target_xcoord_opposite_crane + self.safety_margin:
                         x_coord = target_xcoord_opposite_crane + self.safety_margin
             else:
                 if self.moving:
@@ -463,6 +463,16 @@ class Management:
             self.waiting_crane = crane
             crane.idle = True
             crane.idle_event = self.env.event()
+
+            if not crane.opposite.idle:
+                current_xcoord_crane = crane.current_coord[0]
+                target_xcoord_opposite = crane.opposite.target_coord[0]
+                if crane.name == 'Crane-1' and current_xcoord_crane > target_xcoord_opposite - self.safety_margin:
+                    moving_time_opposite = crane.get_moving_time(to_xcoord=target_xcoord_opposite - self.safety_margin)
+                    crane.move_until = self.env.now + moving_time_opposite
+                elif crane.name == 'Crane-2' and current_xcoord_crane < target_xcoord_opposite + self.safety_margin:
+                    moving_time_opposite = crane.get_moving_time(to_xcoord=target_xcoord_opposite + self.safety_margin)
+                    crane.move_until = self.env.now + moving_time_opposite
 
             waiting_start = self.env.now
             if self.monitor.record_events:
