@@ -262,7 +262,7 @@ if __name__ == "__main__":
                                  input_points=input_points, output_points=output_points,
                                  working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                  multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
-                                algorithm="RL", record_events=record_events, device=device)
+                                 algorithm="RL", record_events=record_events, device=device)
 
     if cfg.vessl == 0:
         writer.close()

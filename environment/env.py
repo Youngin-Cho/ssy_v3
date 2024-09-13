@@ -84,6 +84,8 @@ class SteelStockYard:
 
             if self.algorithm == "RL":
                 next_state, mask, crane_id = self._get_state()
+            elif self.algorithm == 'GP':
+                next_state, mask, crane_id = self._get_state_for_GP()
             else:
                 next_state, mask, crane_id = self._get_state_for_heuristics()
             self.crane_in_decision = self.model.crane_in_decision.id
@@ -115,6 +117,8 @@ class SteelStockYard:
 
             if self.algorithm == "RL":
                 initial_state, mask, crane_id = self._get_state()
+            elif self.algorithm == 'GP':
+                initial_state, mask, crane_id = self._get_state_for_GP()
             else:
                 initial_state, mask, crane_id = self._get_state_for_heuristics()
             self.crane_in_decision = self.model.crane_in_decision.id
@@ -245,6 +249,62 @@ class SteelStockYard:
         mask = torch.tensor(mask, dtype=torch.bool).to(self.device)
 
         return state, mask, self.model.crane_in_decision.id
+
+    def _get_state_for_GP(self):
+        state = np.zeros((self.num_nodes["pile"], self.state_size["pile"] + self.state_size["crane"] * 2))
+
+        mask_piles = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
+        mask_cranes = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
+        mask_eligibility = np.zeros((self.num_nodes["crane"], self.num_nodes["pile"]), dtype=bool)
+
+        for i, from_pile_name in enumerate(self.pile_list):
+            from_pile_x = self.model.piles[from_pile_name].coord[0]
+            plates = self.model.piles[from_pile_name].plates
+
+            cnt1 = self.model.state_info["Crane-1"]["Locations"].count(from_pile_name)
+            cnt2 = self.model.state_info["Crane-2"]["Locations"].count(from_pile_name)
+
+            if (cnt1 == 0) and (cnt2 == 0) and (not from_pile_name in self.model.blocked_piles):
+                mask_piles[:, i] = 1
+
+            state[i, 0] = from_pile_x / 44
+            for j in range(self.look_ahead):
+                if len(plates) >= j + 1:
+                    plate = self.model.piles[from_pile_name].plates[-1-j]
+                    to_pile_name = plate.to_pile
+                    to_pile_x = self.model.piles[to_pile_name].coord[0]
+                    weight = plate.w
+                    state[i, 2 * j + 1] = to_pile_x / 44
+                    state[i, 2 * j + 2] = weight / 19.294
+
+                    if j == 0:
+                        if (from_pile_x <= self.max_x - self.safety_margin) and (to_pile_x <= self.max_x - self.safety_margin):
+                            mask_eligibility[0, i] = 1
+                        if (from_pile_x >= 1 + self.safety_margin) and (to_pile_x >= 1 + self.safety_margin):
+                            mask_eligibility[1, i] = 1
+
+        for i, crane_name in enumerate(self.crane_list):
+            if crane_name in self.working_crane_ids:
+                info = self.model.state_info[crane_name]
+                crane_current_x = info["Current Coord"][0]
+                crane_target_x = info["Target Coord"][0]
+                if info["Idle"] and self.model.crane_in_decision.name == crane_name:
+                    mask_cranes[i, :] = 1
+            else:
+                if crane_name == "Crane-1":
+                    crane_current_x = 2
+                else:
+                    crane_current_x = 43
+                crane_target_x = -1.0
+
+            state[:, 2 * i] = crane_current_x / 44
+            if not crane_target_x == -1:
+                state[i, 2 * i + 1] = crane_target_x / 44
+
+        mask = mask_piles & mask_cranes & mask_eligibility
+
+        return state, mask, self.model.crane_in_decision.id
+
 
     def _get_state_for_heuristics(self):
         state = {"action_mapping": self.action_mapping,

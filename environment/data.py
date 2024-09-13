@@ -277,13 +277,13 @@ if __name__ == '__main__':
     n_from_piles_retrieval_cn2 = 5
     n_from_piles_retrieval_cn3 = 2
 
-    n_plates_storage = 500
-    n_plates_reshuffle = 150
-    n_plates_retrieval = 150
+    n_plates_storage = 50
+    n_plates_reshuffle = 15
+    n_plates_retrieval = 15
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/test/scalability_test/5-20-20/"
+    file_dir = "../input/gp/instances/5-10-10/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
