@@ -277,13 +277,13 @@ if __name__ == '__main__':
     n_from_piles_retrieval_cn2 = 5
     n_from_piles_retrieval_cn3 = 2
 
-    n_plates_storage = 50
-    n_plates_reshuffle = 15
-    n_plates_retrieval = 15
+    n_plates_storage = 500
+    n_plates_reshuffle = 150
+    n_plates_retrieval = 150
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/gp/instances/5-10-10/"
+    file_dir = "../input/validation/5-10-10/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
@@ -311,7 +311,7 @@ if __name__ == '__main__':
                              working_crane_ids=working_crane_ids,
                              safety_margin=safety_margin)
 
-    iteration = 50
+    iteration = 5
     for i in range(1, iteration + 1):
         file_path = file_dir + "instance-{0}.xlsx".format(i)
         df_storage, df_reshuffle, df_retrieval = data_src.generate(file_path=file_path)
