@@ -1,13 +1,14 @@
 import os
 import time
 import json
-import string
+import pickle
 
 import torch
 # import vessl
 
 from environment.env import *
 from agent.network import *
+from agent.gp_tree import *
 from agent.heuristics import *
 from cfg_test import *
 
@@ -89,7 +90,8 @@ if __name__ == "__main__":
 
         index = ["P%d" % i for i in range(1, len(test_paths) + 1)] + ["avg"]
         # columns = ["RL", "SETT", "NCR", "TDD", "TDT", "RAND"] if algorithm == "ALL" else [algorithm]
-        columns = ["RL"]
+        # columns = ["RL"]
+        columns = ["GP-1", "GP-2", "GP-3"]
         # columns = ["SETT", "NCR", "TDD", "TDT", "RAND"]
         df_makespan = pd.DataFrame(index=index, columns=columns)
         df_empty_travel_time_1 = pd.DataFrame(index=index, columns=columns)
@@ -126,6 +128,13 @@ if __name__ == "__main__":
                                          working_crane_ids=working_crane_ids, safety_margin=safety_margin,
                                          multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
                                          algorithm="RL", record_events=record_events)
+                elif "GP" in name:
+                    env = SteelStockYard(data_dir_temp + path, look_ahead=parameters["look_ahead"],
+                                         max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
+                                         input_points=input_points, output_points=output_points,
+                                         working_crane_ids=working_crane_ids, safety_margin=safety_margin,
+                                         multi_num=multi_num, multi_w=multi_w, multi_dis=multi_dis,
+                                         algorithm="GP", record_events=record_events)
                 else:
                     env = SteelStockYard(data_dir_temp + path, look_ahead=parameters["look_ahead"],
                                          max_x=max_x, max_y=max_y, row_range=row_range, bay_range=bay_range,
@@ -145,6 +154,9 @@ if __name__ == "__main__":
                                       use_gnn=use_gnn).to(torch.device('cpu'))
                     checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
                     agent.load_state_dict(checkpoint['model_state_dict'])
+                elif "GP" in name:
+                    with open("./output/gp/gp_best_%s.p" % name[-1], "rb") as file:
+                        agent = pickle.load(file)
 
                 start = time.time()
                 state, mask, crane_id = env.reset()
@@ -153,6 +165,10 @@ if __name__ == "__main__":
                 while not done:
                     if name == "RL":
                         action, _, _ = agent.act(state, mask, crane_id, greedy=False)
+                    elif "GP" in name:
+                        priority_score = agent.compute_tree(state)
+                        priority_score[~mask[crane_id]] = -float('inf')
+                        action = np.argmax(priority_score) * mask.shape[0] + crane_id
                     elif name == "SETT":
                         action = SETT(state, mask)
                     elif name == "NCR":
@@ -164,8 +180,9 @@ if __name__ == "__main__":
                     else:
                         action = RAND(state, mask)
 
-                    next_state, reward, done, mask, next_crane_id = env.step(action)
+                    next_state, reward, done, next_mask, next_crane_id = env.step(action)
                     state = next_state
+                    mask = next_mask
                     crane_id = next_crane_id
 
                     if done:
@@ -206,7 +223,7 @@ if __name__ == "__main__":
             df_computing_time[name] = list_computing_time + [sum(list_computing_time) / len(list_computing_time)]
             print("==========test for %s finished==========" % name)
 
-        writer = pd.ExcelWriter(log_dir_temp + '(RL-GNN) test_results.xlsx')
+        writer = pd.ExcelWriter(log_dir_temp + '(GP) test_results.xlsx')
         df_makespan.to_excel(writer, sheet_name="makespan")
         df_empty_travel_time_1.to_excel(writer, sheet_name="empty_travel_time_1")
         df_avoiding_time_1.to_excel(writer, sheet_name="avoiding_time_1")

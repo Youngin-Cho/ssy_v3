@@ -80,7 +80,7 @@ class GPTree:
         return 1 + l + r
 
     def build_subtree(self):  # count is list in order to pass "by reference"
-        t = GPTree()
+        t = GPTree(self.min_depth, self.xo_rate, self.prob_mutation, self.functions, self.terminals)
         t.data = self.data
         if self.left:  t.left = self.left.build_subtree()
         if self.right: t.right = self.right.build_subtree()
@@ -189,4 +189,4 @@ def fitness(individual, data_dir, cfg):
 def selection(population, fitnesses, tournament_size):  # select one individual using tournament selection
     tournament = [randint(0, len(population) - 1) for i in range(tournament_size)]  # select tournament contenders
     tournament_fitnesses = [fitnesses[tournament[i]] for i in range(tournament_size)]
-    return deepcopy(population[tournament[tournament_fitnesses.index(max(tournament_fitnesses))]])
+    return deepcopy(population[tournament[tournament_fitnesses.index(min(tournament_fitnesses))]])
