@@ -204,7 +204,7 @@ class SteelStockYard:
                     if j == 0:
                         if (from_pile_x <= self.max_x - self.safety_margin) and (to_pile_x <= self.max_x - self.safety_margin):
                             mask_eligibility[0, i] = 1
-                        if (from_pile_x >= 1 + self.safety_margin) and ( to_pile_x >= 1 + self.safety_margin):
+                        if (from_pile_x >= 1 + self.safety_margin) and (to_pile_x >= 1 + self.safety_margin):
                             mask_eligibility[1, i] = 1
 
         state['crane'].x = torch.tensor(X_cranes, dtype=torch.float32).to(self.device)

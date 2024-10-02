@@ -56,12 +56,14 @@ class Pile:
 
 
 class Crane:
-    def __init__(self, env, name, id, safety_margin, w_limit, coord):
+    def __init__(self, env, name, id, safety_margin, w_limit, max_x, max_y, coord):
         self.env = env
         self.name = name
         self.id = id
         self.safety_margin = safety_margin
         self.w_limit = w_limit
+        self.max_x = max_x
+        self.max_y = max_y
         self.current_coord = coord
         self.target_coord = (-1.0, -1.0)
         self.safety_xcoord = -1.0
@@ -150,15 +152,35 @@ class Crane:
             else:
                 if self.moving:
                     if self.safety_xcoord != -1.0:
-                        x_coord = x_coord + time_elapsed * self.x_velocity * np.sign(self.safety_xcoord - x_coord)
+                        x_direction = np.sign(self.safety_xcoord - x_coord)
+                        x_limit = self.safety_xcoord
                     else:
-                        x_coord = x_coord + time_elapsed * self.x_velocity * np.sign(self.target_coord[0] - x_coord)
-                    y_coord = y_coord + time_elapsed * self.y_velocity * np.sign(self.target_coord[1] - y_coord)
-                    x_coord = np.clip(x_coord, 1, 44)
-                    y_coord = np.clip(y_coord, 1, 2)
+                        x_direction = np.sign(self.target_coord[0] - x_coord)
+                        x_limit = self.target_coord[0]
+                    y_direction = np.sign(self.target_coord[1] - y_coord)
+                    y_limit = self.target_coord[1]
+
+                    x_coord = x_coord + time_elapsed * self.x_velocity * x_direction
+                    y_coord = y_coord + time_elapsed * self.y_velocity * y_direction
+
+                    if x_direction == 1:
+                        x_coord = np.clip(x_coord, a_min=1, a_max=x_limit)
+                    else:
+                        x_coord = np.clip(x_coord, a_min=x_limit, a_max=self.max_x)
+
+                    if y_direction == 1:
+                        y_coord = np.clip(y_coord, a_min=1, a_max=y_limit)
+                    else:
+                        y_coord = np.clip(y_coord, a_min=y_limit, a_max=self.max_y)
                 else:
-                    y_coord = y_coord + time_elapsed * self.y_velocity * np.sign(self.target_coord[1] - y_coord)
-                    y_coord = np.clip(y_coord, 1, 2)
+                    y_direction = np.sign(self.target_coord[1] - y_coord)
+                    y_coord = y_coord + time_elapsed * self.y_velocity * y_direction
+                    y_limit = self.target_coord[1]
+
+                    if y_direction == 1:
+                        y_coord = np.clip(y_coord, a_min=1, a_max=y_limit)
+                    else:
+                        y_coord = np.clip(y_coord, a_min=y_limit, a_max=self.max_y)
 
         self.update_time = time
         self.current_coord = (x_coord, y_coord)
@@ -253,8 +275,8 @@ class Management:
 
         self.location_mapping = {tuple(pile.coord): pile for pile in self.piles.values()}  # coord를 통해 pile 호출
         for conveyor in self.conveyors.values():
-            self.location_mapping[tuple(conveyor.coord + [1])] = conveyor
-            self.location_mapping[tuple(conveyor.coord + [2])] = conveyor
+            for i in range(1, self.max_y + 1):
+                self.location_mapping[tuple(conveyor.coord + [i])] = conveyor
 
         self.decision_time = False
         self.crane_in_decision = None
@@ -312,8 +334,8 @@ class Management:
 
         cranes = PriorityFilterStore(env)
 
-        crane1 = Crane(env, 'Crane-1', 0, self.safety_margin, 8.0, self.initial_coord["Crane-1"])
-        crane2 = Crane(env, 'Crane-2', 1, self.safety_margin, 8.0, self.initial_coord["Crane-2"])
+        crane1 = Crane(env, 'Crane-1', 0, self.safety_margin, 8.0, self.max_x, self.max_y, self.initial_coord["Crane-1"])
+        crane2 = Crane(env, 'Crane-2', 1, self.safety_margin, 8.0, self.max_x, self.max_y, self.initial_coord["Crane-2"])
 
         crane1.opposite = crane2
         crane2.opposite = crane1
@@ -772,15 +794,24 @@ class Management:
                 # 출고 작업을 수행할 강재가 적치되어 있는 파일 리스트 생성
                 candidates = []
                 for from_pile_name in self.df_retrieval["pileno"].unique():
-                    cnt = crane.opposite.from_piles.count(from_pile_name)
-                    if cnt > 0:
-                        plates = self.piles[from_pile_name].plates[:-1-cnt]
-                    else:
-                        plates = self.piles[from_pile_name].plates[:]
-                    if len(plates) > 0:
-                        temp = self.df_retrieval[self.df_retrieval["pileno"] == from_pile_name]
-                        if conveyor.name in temp["topile"].unique():
-                            candidates.append(from_pile_name)
+                    from_pile_x = self.piles[from_pile_name].coord[0]
+
+                    flag = False
+                    if crane.name == "Crane-1" and from_pile_x <= self.max_x - self.safety_margin:
+                        flag = True
+                    if crane.name == "Crane-2" and from_pile_x >= 1 + self.safety_margin:
+                        flag = True
+
+                    if flag:
+                        cnt = crane.opposite.from_piles.count(from_pile_name)
+                        if cnt > 0:
+                            plates = self.piles[from_pile_name].plates[:-1-cnt]
+                        else:
+                            plates = self.piles[from_pile_name].plates[:]
+                        if len(plates) > 0:
+                            temp = self.df_retrieval[self.df_retrieval["pileno"] == from_pile_name]
+                            if conveyor.name in temp["topile"].unique():
+                                candidates.append(from_pile_name)
 
                 # 생성된 파일 리스트에서 랜덤하게 파일을 하나 선택하고 해당 파일에 적치된 강재에 대한 출고 작업 수행
                 if len(candidates) > 0:
