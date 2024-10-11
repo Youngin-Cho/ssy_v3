@@ -19,19 +19,33 @@ def draw_boxplot(file_path):
     fig.savefig("./boxplot.png")
 
 
-def perform_paired_t_test(file_path):
-    df = pd.read_excel(file_path)
-    df = df.iloc[:-1]
+def perform_paired_t_test(log_dir):
+    p_values = []
+    for log_dir_temp in log_dir:
+        df_RL_GNN = pd.read_excel(log_dir_temp + '(RL-GNN) test_results.xlsx', index_col=0)
+        df_RL_GNN = df_RL_GNN.rename(columns={"RL": "RL-GNN"})
 
-    res = stats.ttest_rel(df["RL"], df["SD"])
-    print("(RL vs SD) p-value: %f" % res.pvalue)
+        df_RL_MLP = pd.read_excel(log_dir_temp + '(RL-MLP) test_results.xlsx', index_col=0)
+        df_RL_MLP = df_RL_MLP.rename(columns={"RL": "RL-MLP"})
 
-    res = stats.ttest_rel(df["RL"], df["MA"])
-    print("(RL vs MA) p-value: %f" % res.pvalue)
+        df_GP = pd.read_excel(log_dir_temp + '(GP) test_results.xlsx', index_col=0)
+        df_Heuristics = pd.read_excel(log_dir_temp + '(Heuristics) test_results.xlsx', index_col=0)
 
-    res = stats.ttest_rel(df["RL"], df["RAND"])
-    print("(RL vs RAND) p-value: %f" % res.pvalue)
+        df_all = pd.concat([df_RL_GNN, df_RL_MLP, df_GP, df_Heuristics], axis=1)
+        df_all = df_all.iloc[:-1]
 
+        temp = []
+        for name in df_all.columns:
+            if name != "RL-GNN":
+                res = stats.ttest_rel(df_all["RL-GNN"], df_all[name])
+                pvalue = res.pvalue
+                temp.append(pvalue)
+        p_values.append(temp)
+
+    df_results = pd.DataFrame(p_values, columns=df_all.columns[1:])
+    writer = pd.ExcelWriter('./output/test/ttest.xlsx')
+    df_results.to_excel(writer, sheet_name="results")
+    writer.close()
 
 def get_lowerbound(row_range=("A", "B"), bay_range=(1, 40), output_points=(23, 27, 44)):
     x_velocity = 0.5
@@ -51,24 +65,33 @@ def get_lowerbound(row_range=("A", "B"), bay_range=(1, 40), output_points=(23, 2
                 x_coord += 1
             coord_mapping[name] = (x_coord, y_coord)
 
-    data_dir = ["./input/test/basic_test/5-10-10/",
-                "./input/test/scalability_test/5-10-15/",
-                "./input/test/scalability_test/5-10-20/",
-                "./input/test/scalability_test/5-15-10/",
-                "./input/test/scalability_test/5-15-15/",
-                "./input/test/scalability_test/5-15-20/",
-                "./input/test/scalability_test/5-20-10/",
-                "./input/test/scalability_test/5-20-15/",
-                "./input/test/scalability_test/5-20-20/"]
-    log_dir = ["./output/test/basic_test/5-10-10/",
-               "./output/test/scalability_test/5-10-15/",
-               "./output/test/scalability_test/5-10-20/",
-               "./output/test/scalability_test/5-15-10/",
-               "./output/test/scalability_test/5-15-15/",
-               "./output/test/scalability_test/5-15-20/",
-               "./output/test/scalability_test/5-20-10/",
-               "./output/test/scalability_test/5-20-15/",
-               "./output/test/scalability_test/5-20-20/"]
+    # data_dir = ["./input/test/basic_test/5-10-10/",
+    #             "./input/test/scalability_test/5-10-15/",
+    #             "./input/test/scalability_test/5-10-20/",
+    #             "./input/test/scalability_test/5-15-10/",
+    #             "./input/test/scalability_test/5-15-15/",
+    #             "./input/test/scalability_test/5-15-20/",
+    #             "./input/test/scalability_test/5-20-10/",
+    #             "./input/test/scalability_test/5-20-15/",
+    #             "./input/test/scalability_test/5-20-20/"]
+    # log_dir = ["./output/test/basic_test/5-10-10/",
+    #            "./output/test/scalability_test/5-10-15/",
+    #            "./output/test/scalability_test/5-10-20/",
+    #            "./output/test/scalability_test/5-15-10/",
+    #            "./output/test/scalability_test/5-15-15/",
+    #            "./output/test/scalability_test/5-15-20/",
+    #            "./output/test/scalability_test/5-20-10/",
+    #            "./output/test/scalability_test/5-20-15/",
+    #            "./output/test/scalability_test/5-20-20/"]
+
+    data_dir = ["./input/test/computational_complexity/1600/",
+                "./input/test/computational_complexity/1800/",
+                "./input/test/computational_complexity/2200/",
+                "./input/test/computational_complexity/2400/"]
+    log_dir = ["./output/test/computational_complexity/1600/",
+               "./output/test/computational_complexity/1800/",
+               "./output/test/computational_complexity/2200/",
+               "./output/test/computational_complexity/2400/"]
 
 
     for log_dir_temp in log_dir:
@@ -140,12 +163,8 @@ if __name__ == "__main__":
                "./output/test/scalability_test/5-15-20/",
                "./output/test/scalability_test/5-20-10/",
                "./output/test/scalability_test/5-20-15/",
-               "./output/test/scalability_test/5-20-20/",
-               "./output/test/case_study/moving_pattern/to_end/",
-               "./output/test/case_study/moving_pattern/to_right/",
-               "./output/test/case_study/num_row/4/",
-               "./output/test/case_study/num_row/6/"]
+               "./output/test/scalability_test/5-20-20/"]
 
-    summarize(log_dir)
+    perform_paired_t_test(log_dir)
 
 

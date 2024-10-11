@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
     working_crane_ids = ("Crane-1", "Crane-2")
     safety_margin = 5
-    file_dir = "../input/validation/5-10-10/"
+    file_dir = "../input/test/computational_complexity/5-10-10/2400/"
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
@@ -311,7 +311,7 @@ if __name__ == '__main__':
                              working_crane_ids=working_crane_ids,
                              safety_margin=safety_margin)
 
-    iteration = 5
+    iteration = 50
     for i in range(1, iteration + 1):
         file_path = file_dir + "instance-{0}.xlsx".format(i)
         df_storage, df_reshuffle, df_retrieval = data_src.generate(file_path=file_path)
